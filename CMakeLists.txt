@@ -1,4 +1,4 @@
-# Original file Copyright CMU462 Fall 2015: 
+# Original file Copyright CMU462 Fall 2015:
 # Kayvon Fatahalian, Keenan Crane,
 # Sky Gao, Bryce Summers, Michael Choquette.
 cmake_minimum_required(VERSION 3.2)
@@ -19,39 +19,39 @@ option(BUILD_DOCS      "Build documentation"          OFF)
 ###################
 if(APPLE)
 
-  # Clang configuration
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    # Clang configuration
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
-    set(CLANG_CXX_FLAGS "-std=c++11 -m64")
+        set(CLANG_CXX_FLAGS "-std=c++11 -m64")
 
-    if(BUILD_DEBUG)
-      set(CMAKE_BUILD_TYPE Debug)
-    else(BUILD_DEBUG)
-      set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -O3")
-      set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -funroll-loops")
-      set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -Wno-narrowing")
-      set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -Wno-deprecated-register")
-    endif(BUILD_DEBUG)
+        if(BUILD_DEBUG)
+            set(CMAKE_BUILD_TYPE Debug)
+        else(BUILD_DEBUG)
+            set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -O3")
+            set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -funroll-loops")
+            set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -Wno-narrowing")
+            set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -Wno-deprecated-register")
+        endif(BUILD_DEBUG)
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CLANG_CXX_FLAGS}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CLANG_CXX_FLAGS}")
 
-  endif()
+    endif()
 
-  # GCC configuration
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    # GCC configuration
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 
-    set(GCC_CXX_FLAGS "-std=c++11 -m64")
+        set(GCC_CXX_FLAGS "-std=c++11 -m64")
 
-    if(BUILD_DEBUG)
-      set(CMAKE_BUILD_TYPE Debug)
-    else(BUILD_DEBUG)
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -O3")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -fopenmp")
-    endif(BUILD_DEBUG)
+        if(BUILD_DEBUG)
+            set(CMAKE_BUILD_TYPE Debug)
+        else(BUILD_DEBUG)
+            set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -O3")
+            set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -fopenmp")
+        endif(BUILD_DEBUG)
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_CXX_FLAGS}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_CXX_FLAGS}")
 
-  endif()
+    endif()
 
 endif(APPLE)
 
@@ -61,22 +61,22 @@ endif(APPLE)
 set(LINUX UNIX AND NOT APPLE)
 if(LINUX)
 
-  # GCC only
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    # GCC only
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 
-    set(GCC_CXX_FLAGS "-std=c++11 -m64")
+        set(GCC_CXX_FLAGS "-std=c++11 -m64")
 
-    # Debug configuration
-    if(BUILD_DEBUG)
-        set(CMAKE_BUILD_TYPE Debug)
-    else(BUILD_DEBUG)
-        set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -O3")
-        set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -fopenmp")
-    endif(BUILD_DEBUG)
+        # Debug configuration
+        if(BUILD_DEBUG)
+            set(CMAKE_BUILD_TYPE Debug)
+        else(BUILD_DEBUG)
+            set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -O3")
+            set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -fopenmp")
+        endif(BUILD_DEBUG)
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_CXX_FLAGS}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_CXX_FLAGS}")
 
-  endif()
+    endif()
 
 endif(LINUX)
 
@@ -85,31 +85,31 @@ endif(LINUX)
 ####################
 if(WIN32)
 
-  if(MSVC)
+    if(MSVC)
 
-    set(MSVC_CXX_FLAGS "-std=c++11")
+        set(MSVC_CXX_FLAGS "-std=c++11")
 
-    if(BUILD_DEBUG)
-        set(CMAKE_BUILD_TYPE Debug)
-    else(BUILD_DEBUG)
-    endif(BUILD_DEBUG)
+        if(BUILD_DEBUG)
+            set(CMAKE_BUILD_TYPE Debug)
+        else(BUILD_DEBUG)
+        endif(BUILD_DEBUG)
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSVC_CXX_FLAGS}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSVC_CXX_FLAGS}")
 
-  endif(MSVC)
+    endif(MSVC)
 
-  if(MINGW)
+    if(MINGW)
 
-    set(MSVC_CXX_FLAGS "-std=c++11")
+        set(MSVC_CXX_FLAGS "-std=c++11")
 
-    if(BUILD_DEBUG)
-        set(CMAKE_BUILD_TYPE Debug)
-    else(BUILD_DEBUG)
-    endif(BUILD_DEBUG)
+        if(BUILD_DEBUG)
+            set(CMAKE_BUILD_TYPE Debug)
+        else(BUILD_DEBUG)
+        endif(BUILD_DEBUG)
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSVC_CXX_FLAGS}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSVC_CXX_FLAGS}")
 
-  endif(MINGW)
+    endif(MINGW)
 
 endif(WIN32)
 
@@ -129,26 +129,26 @@ include_directories(CGL/include)
 
 
 
-# Original file Copyright CMU462 Fall 2015: 
+# Original file Copyright CMU462 Fall 2015:
 # Kayvon Fatahalian, Keenan Crane,
 # Sky Gao, Bryce Summers, Michael Choquette.
 cmake_minimum_required(VERSION 3.2)
 
 # Application source
 set(APPLICATION_SOURCE
-    src/main.cpp
-    src/grid.cpp
-    src/grid.h
-)
+        src/main.cpp
+        src/grid.cpp
+        src/grid.h
+        src/callback.h)
 
 #-------------------------------------------------------------------------------
 # Set include directories
 #-------------------------------------------------------------------------------
 include_directories(
-  ${GLEW_INCLUDE_DIRS}
-  ${GLFW_INCLUDE_DIRS}
-  ${CGL_INCLUDE_DIRS}
-  ${FREETYPE_INCLUDE_DIRS}
+        ${GLEW_INCLUDE_DIRS}
+        ${GLFW_INCLUDE_DIRS}
+        ${CGL_INCLUDE_DIRS}
+        ${FREETYPE_INCLUDE_DIRS}
 )
 
 if (WIN32)
@@ -159,10 +159,10 @@ endif(WIN32)
 # Set link directories
 #-------------------------------------------------------------------------------
 link_directories(
-  ${GLEW_LIBRARY_DIRS}
-  ${GLFW_LIBRARY_DIRS}
-  ${CGL_LIBRARY_DIRS}
-  ${FREETYPE_LIBRARY_DIRS}
+        ${GLEW_LIBRARY_DIRS}
+        ${GLFW_LIBRARY_DIRS}
+        ${CGL_LIBRARY_DIRS}
+        ${FREETYPE_LIBRARY_DIRS}
 )
 
 #-------------------------------------------------------------------------------
@@ -171,18 +171,18 @@ link_directories(
 add_executable(smoke_simulator ${APPLICATION_SOURCE})
 
 target_link_libraries( smoke_simulator
-    CGL ${CGL_LIBRARIES}
-    glew ${GLEW_LIBRARIES}
-    glfw ${GLFW_LIBRARIES}
-    ${OPENGL_LIBRARIES}
-    ${FREETYPE_LIBRARIES}
-    ${CMAKE_THREADS_INIT}
-)
+        CGL ${CGL_LIBRARIES}
+        glew ${GLEW_LIBRARIES}
+        glfw ${GLFW_LIBRARIES}
+        ${OPENGL_LIBRARIES}
+        ${FREETYPE_LIBRARIES}
+        ${CMAKE_THREADS_INIT}
+        )
 
 #-------------------------------------------------------------------------------
 # Platform-specific configurations for target
 #-------------------------------------------------------------------------------
 if(APPLE)
-  set_property( TARGET smoke_simulator APPEND_STRING PROPERTY COMPILE_FLAGS
-                "-Wno-deprecated-declarations -Wno-c++11-extensions")
+    set_property( TARGET smoke_simulator APPEND_STRING PROPERTY COMPILE_FLAGS
+            "-Wno-deprecated-declarations -Wno-c++11-extensions")
 endif(APPLE)
