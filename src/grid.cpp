@@ -1,8 +1,3 @@
-//
-//  grid.cpp
-//
-//
-
 #include <stdio.h>
 #include <iostream>
 #include "grid.h"
@@ -25,26 +20,35 @@ Grid::Grid(int width, int height) {
     this->height = height;
     this->density.resize(width * height, 0.0);
     this->temperature.resize(width * height, 0.0);
+    this->num_iter = 16;
 
-    normal_distribution<double> dis_v(0, 2); // normal distribution in C++11
-    this->velocity.resize(width * height, Vector2D(dis_v(rng), dis_v(rng)));
+    normal_distribution<double> dis_v(0, 5); // normal distribution in C++11
+    this->velocity.resize(width * height);
+    for (int i = 0; i < width * height; ++i) {
+        this->velocity[i] = Vector2D(dis_v(rng), dis_v(rng));
+    }
+//    this->velocity.resize(width * height, Vector2D(dis_v(rng), dis_v(rng)));
+//    this->velocity.resize(width * height, Vector2D(0.5, 0.5));
 }
 
-Grid::Grid(const Grid& grid) {
+Grid::Grid(const Grid &grid) {
     height = grid.height;
     width = grid.width;
     density = grid.density;
     velocity = grid.velocity;
     temperature = grid.temperature;
+    num_iter = grid.num_iter;
 //  cout << "copy" << endl;
 }
 
-Grid& Grid::operator=(const Grid &grid) {
+Grid &Grid::operator=(const Grid &grid) {
     height = grid.height;
     width = grid.width;
     density = grid.density;
     velocity = grid.velocity;
     temperature = grid.temperature;
+    num_iter = grid.num_iter;
+
 //  cout << "copy assign" << endl;
     return *this;
 }
@@ -55,29 +59,31 @@ Grid::Grid(Grid &&grid) noexcept {
     density = move(grid.density);
     velocity = move(grid.velocity);
     temperature = move(grid.temperature);
+    num_iter = grid.num_iter;
+
 //  cout << "move" << endl;
 }
 
-Grid& Grid::operator=(Grid &&grid) noexcept {
+Grid &Grid::operator=(Grid &&grid) noexcept {
     height = grid.height;
     width = grid.width;
     density = move(grid.density);
     velocity = move(grid.velocity);
     temperature = move(grid.temperature);
+    num_iter = grid.num_iter;
+
 //  cout << "move assign" << endl;
     return *this;
 }
 
 void Grid::simulate(double timestep) {
-    // (1) performa advection using Stam's method.
-    Grid newGrid(width, height);
-    for (int x = 0; x < width; x++) {
-        for (int y = 0; y < height; y++) {
+    vector<double> advection_grid(width * height, 0.0);
+    for (int x = 0; x < width; ++x) {
+        for (int y = 0; y < height; ++y) {
             Vector2D reverse_velocity = -getVelocity(x, y) * timestep;
-            //cout << "current " << x << " next " << x + reverse_velocity[0] << endl;
-            if (x + reverse_velocity[0] < 0 || x + reverse_velocity[0] > width - 1 || y + reverse_velocity[1] < 0 ||
-                y + reverse_velocity[1] > height - 1) {
-                newGrid.setDensity(x, y, 0.0);
+            if (x + reverse_velocity[0] < 0 || x + reverse_velocity[0] >= width || y + reverse_velocity[1] < 0 ||
+                y + reverse_velocity[1] >= height) { // TODO didn't care about boundary grids
+                advection_grid[y * width + x] = 0.0;
             } else {
                 double newx = x + reverse_velocity[0];
                 double newy = y + reverse_velocity[1];
@@ -92,19 +98,42 @@ void Grid::simulate(double timestep) {
                 double blerp = interpolate(getDensity(bl), getDensity(br), newx - tl[0]);
                 double vlerp = interpolate(blerp, tlerp, newy - bl[1]);
 
-                newGrid.setDensity(x, y, vlerp);
-
-//        cout << reverse_velocity[0] << " "<< reverse_velocity[1] << endl;
-                //cout << "current " << x << " " << y << " prev " << x + reverse_velocity[0] << " " << y + reverse_velocity[1] << endl;
+                advection_grid[y * width + x] = vlerp;
             }
         }
     }
 
-    // copy over the new grid to existing grid
-    *this = move(newGrid);
+    vector<Vector2D> viscous_velocity_grid(width * height);
+    vector<Vector2D> tem(width * height);
+    tem.assign(this->velocity.begin(), this->velocity.end());
+
+    double alpha = 1 / (timestep*num_iter);
+    double beta = 4 + alpha;
+    for (int iter = 0; iter < num_iter; ++iter) {
+        for (int x = 0; x < width; ++x) {
+            for (int y = 0; y < height; ++y) {
+                // TODO didn't care about boundary grids
+                if (x == 0 || x == width - 1 || y == 0 || y == height - 1) {
+                    viscous_velocity_grid[y * width + x] = tem[y * width + x];
+                    continue;
+                }
+                Vector2D l = tem[y * width + x - 1];
+                Vector2D r = tem[y * width + x + 1];
+                Vector2D u = tem[(y + 1) * width + x];
+                Vector2D b = tem[(y - 1) * width + x];
+                Vector2D center = tem[y * width + x];
+
+                Vector2D new_velocity = (l + r + u + b + alpha * center) / beta;
+                viscous_velocity_grid[y * width + x] = new_velocity;
+            }
+        }
+        tem.assign(viscous_velocity_grid.begin(), viscous_velocity_grid.end());
+    }
+
+    this->density.assign(advection_grid.begin(), advection_grid.end());
+    this->velocity.assign(viscous_velocity_grid.begin(), viscous_velocity_grid.end());
 }
 
-// interpolates between d1 and d2 based on weight s (between 0 and 1)
 double interpolate(double d1, double d2, double s) {
     return (1 - s) * d1 + s * d2;
 }
@@ -134,7 +163,7 @@ void Grid::printGrid() {
     for (int y = height - 1; y >= 0; y--) {
         string s = "";
         for (int x = 0; x < width; x++) {
-            s.append(to_string(getDensity(x, y)));
+            s.append(to_string(getDensity(x, y)).substr(0, 5));
             s.push_back(' ');
         }
         cout << s << endl;

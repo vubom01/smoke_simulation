@@ -8,23 +8,30 @@
 #include "callback.h"
 
 static std::random_device rd;
-static mt19937 rng(rd()); // random number generator in C++11
+static mt19937 rng(rd());
 
 Grid grid;
 
 // starts a smoke at a random location
-void randomize_grid(Grid &grid, int iter = 3) {
-    uni_dis dis_x(0, NUMCOL - 1); // uniform distribution in C++11
-    uni_dis dis_y(0, NUMROW - 1); // uniform distribution in C++11
-    uni_dis dis_density(25, 75); // uniform distribution in C++11
-    while (iter--) {
-        int chosenx = dis_x(rng);
-        int choseny = dis_y(rng);
-        grid.setDensity(chosenx, choseny, dis_density(rng));
+void randomize_grid(Grid &grid, int num_speckle = 3, int size = 5) {
+    uni_dis dis_x(0, NUMCOL - size);
+    uni_dis dis_y(0, NUMROW - size);
+    uni_dis dis_density(25, 75);
+    uni_dis dis_size(1, size);
+    while (num_speckle--) {
+        int chosen_x = dis_x(rng);
+        int chosen_y = dis_y(rng);
+        int chosen_size = dis_size(rng);
+        double chosen_density = dis_density(rng);
+        for (int i = 0; i < chosen_size; ++i) {
+            for (int j = 0; j < chosen_size; ++j) {
+                grid.setDensity(chosen_x + i, chosen_y + j, grid.getDensity(chosen_x + i, chosen_y + j) + chosen_density);
+            }
+        }
     }
 }
 
-void display(const Grid& grid) {
+void display(const Grid &grid) {
     glClear(GL_COLOR_BUFFER_BIT);
     double width = 1 / (double) NUMCOL * 2;
     double height = 1 / (double) NUMROW * 2;
@@ -32,7 +39,6 @@ void display(const Grid& grid) {
     for (int y = 0; y < NUMROW; ++y) {
         for (int x = 0; x < NUMCOL; ++x) {
             glColor3d(grid.getDensity(x, y) / 100, grid.getDensity(x, y) / 100, grid.getDensity(x, y) / 100);
-            //glColor3d((double)x/NUMCOL, (double)x/NUMCOL, (double)x/NUMCOL);
 
             glBegin(GL_QUADS);
             double bottom_left_x = -1 + width * x;
@@ -50,11 +56,9 @@ void display(const Grid& grid) {
 }
 
 int main() {
-
     grid = Grid(NUMCOL, NUMROW);
 
     GLFWwindow *window;
-    // Initialize
     if (!glfwInit()) {
         return -1;
     }
@@ -65,8 +69,9 @@ int main() {
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // To prevent screen tearing
+    glfwSwapInterval(1);
 
+    // Callback functions
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
 
@@ -75,11 +80,23 @@ int main() {
         auto cur_time = steady_clock::now();
         auto elapsed = duration_cast<milliseconds>(cur_time - last_time);
 
+        if (mouse_down) {
+            double xpos = grid.cursor_pos[0];
+            double ypos = grid.cursor_pos[1];
+
+            int row = int(NUMROW - NUMROW * ypos / double(WINDOW_HEIGHT));
+            int col = int(NUMCOL * xpos / double(WINDOW_WIDTH));
+
+            double den = grid.getDensity(col, row);
+            grid.setDensity(col, row, std::max(den + 25, 100.0));
+        }
+
         if (FREQ * elapsed.count() >= 1000) {
             //std::cout << "Update the grid" << std::endl;
             last_time = cur_time;
             grid.simulate(1);
-            randomize_grid(grid);
+            randomize_grid(grid, 1, 15);
+
             //grid.printGrid();
         }
         display(grid);

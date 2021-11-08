@@ -1,8 +1,3 @@
-//
-//  grid.h
-//
-//
-
 #ifndef grid_h
 #define grid_h
 
@@ -27,10 +22,11 @@ struct Grid {
 
     ~Grid() {}
 
-    // Grid parameters
     int height;
     int width;
     Vector2D cursor_pos;
+
+    int num_iter;
 
     vector<double> density;
     vector<double> temperature;
@@ -38,7 +34,6 @@ struct Grid {
 
     void simulate(double timestep);
 
-    // Getter and setter methods
     double getDensity(int x, int y) const { return density[y * width + x]; }
 
     double getDensity(Vector2D vec) const {
