@@ -1,6 +1,8 @@
 #ifndef common_h
 #define common_h
 
+#include "omp.h"
+
 using std::mt19937;
 using std::uniform_int_distribution;
 using uni_dis = uniform_int_distribution<int>;
@@ -8,7 +10,7 @@ using namespace std::chrono;
 
 const int NUMROW = 200;
 const int NUMCOL = 200;
-const int FREQ   = 2;
+const int FREQ   = 20;
 const int WINDOW_WIDTH = 640;
 const int WINDOW_HEIGHT = 640;
 

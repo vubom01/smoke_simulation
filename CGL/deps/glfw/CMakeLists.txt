@@ -5,7 +5,6 @@ cmake_minimum_required(VERSION 3.2)
 if (CMAKE_VERSION VERSION_EQUAL "3.0" OR CMAKE_VERSION VERSION_GREATER "3.0")
     # Until all major package systems have moved to CMake 3,
     # we stick with the older INSTALL_NAME_DIR mechanism
-    cmake_policy(SET CMP0042 NEW)
 endif()
 
 set(GLFW_VERSION_MAJOR "3")
@@ -60,7 +59,7 @@ endif()
 
 if (GLFW_USE_EGL)
     set(GLFW_CLIENT_LIBRARY "opengl" CACHE STRING
-        "The client library to use; one of opengl, glesv1 or glesv2")
+            "The client library to use; one of opengl, glesv1 or glesv2")
 
     if (${GLFW_CLIENT_LIBRARY} STREQUAL "opengl")
         set(_GLFW_USE_OPENGL 1)
@@ -119,10 +118,10 @@ if (MSVC)
 
     if (NOT USE_MSVC_RUNTIME_LIBRARY_DLL)
         foreach (flag CMAKE_C_FLAGS
-                        CMAKE_C_FLAGS_DEBUG
-                        CMAKE_C_FLAGS_RELEASE
-                        CMAKE_C_FLAGS_MINSIZEREL
-                        CMAKE_C_FLAGS_RELWITHDEBINFO)
+                CMAKE_C_FLAGS_DEBUG
+                CMAKE_C_FLAGS_RELEASE
+                CMAKE_C_FLAGS_MINSIZEREL
+                CMAKE_C_FLAGS_RELWITHDEBINFO)
 
             if (${flag} MATCHES "/MD")
                 string(REGEX REPLACE "/MD" "/MT" ${flag} "${${flag}}")
@@ -398,8 +397,8 @@ if (_GLFW_GLX)
     check_function_exists(glXGetProcAddressEXT _GLFW_HAS_GLXGETPROCADDRESSEXT)
 
     if (NOT _GLFW_HAS_GLXGETPROCADDRESS AND
-        NOT _GLFW_HAS_GLXGETPROCADDRESSARB AND
-        NOT _GLFW_HAS_GLXGETPROCADDRESSEXT)
+            NOT _GLFW_HAS_GLXGETPROCADDRESSARB AND
+            NOT _GLFW_HAS_GLXGETPROCADDRESSEXT)
         message(WARNING "No glXGetProcAddressXXX variant found")
 
         # Check for dlopen support as a fallback
@@ -474,14 +473,14 @@ if (_GLFW_COCOA AND _GLFW_NSGL)
     find_library(CORE_FOUNDATION_FRAMEWORK CoreFoundation)
     find_library(CORE_VIDEO_FRAMEWORK CoreVideo)
     mark_as_advanced(COCOA_FRAMEWORK
-                     IOKIT_FRAMEWORK
-                     CORE_FOUNDATION_FRAMEWORK
-                     CORE_VIDEO_FRAMEWORK)
+            IOKIT_FRAMEWORK
+            CORE_FOUNDATION_FRAMEWORK
+            CORE_VIDEO_FRAMEWORK)
     list(APPEND glfw_LIBRARIES "${COCOA_FRAMEWORK}"
-                               "${OPENGL_gl_LIBRARY}"
-                               "${IOKIT_FRAMEWORK}"
-                               "${CORE_FOUNDATION_FRAMEWORK}"
-                               "${CORE_VIDEO_FRAMEWORK}")
+            "${OPENGL_gl_LIBRARY}"
+            "${IOKIT_FRAMEWORK}"
+            "${CORE_FOUNDATION_FRAMEWORK}"
+            "${CORE_VIDEO_FRAMEWORK}")
 
     set(glfw_PKG_DEPS "")
     set(glfw_PKG_LIBS "-framework Cocoa -framework OpenGL -framework IOKit -framework CoreFoundation -framework CoreVideo")
@@ -520,25 +519,25 @@ else()
 endif()
 
 configure_package_config_file("${GLFW_SOURCE_DIR}/src/glfw3Config.cmake.in"
-                              "${GLFW_BINARY_DIR}/src/glfw3Config.cmake"
-                              INSTALL_DESTINATION "${GLFW_CONFIG_PATH}"
-                              PATH_VARS CMAKE_INSTALL_PREFIX
-                              NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+        "${GLFW_BINARY_DIR}/src/glfw3Config.cmake"
+        INSTALL_DESTINATION "${GLFW_CONFIG_PATH}"
+        PATH_VARS CMAKE_INSTALL_PREFIX
+        NO_CHECK_REQUIRED_COMPONENTS_MACRO)
 
-write_basic_package_version_file("${GLFW_BINARY_DIR}/src/glfw3ConfigVersion.cmake" 
-                                 VERSION ${GLFW_VERSION_FULL}
-                                 COMPATIBILITY SameMajorVersion)
+write_basic_package_version_file("${GLFW_BINARY_DIR}/src/glfw3ConfigVersion.cmake"
+        VERSION ${GLFW_VERSION_FULL}
+        COMPATIBILITY SameMajorVersion)
 
 if (GLFW_BUILD_DOCS)
     configure_file("${GLFW_SOURCE_DIR}/docs/Doxyfile.in"
-                   "${GLFW_BINARY_DIR}/docs/Doxyfile" @ONLY)
+            "${GLFW_BINARY_DIR}/docs/Doxyfile" @ONLY)
 endif()
 
 configure_file("${GLFW_SOURCE_DIR}/src/glfw_config.h.in"
-               "${GLFW_BINARY_DIR}/src/glfw_config.h" @ONLY)
+        "${GLFW_BINARY_DIR}/src/glfw_config.h" @ONLY)
 
 configure_file("${GLFW_SOURCE_DIR}/src/glfw3.pc.in"
-               "${GLFW_BINARY_DIR}/src/glfw3.pc" @ONLY)
+        "${GLFW_BINARY_DIR}/src/glfw3.pc" @ONLY)
 
 #--------------------------------------------------------------------
 # Add subdirectories
@@ -566,7 +565,7 @@ if (GLFW_INSTALL)
             FILES_MATCHING PATTERN glfw3.h PATTERN glfw3native.h)
 
     install(FILES "${GLFW_BINARY_DIR}/src/glfw3Config.cmake"
-                  "${GLFW_BINARY_DIR}/src/glfw3ConfigVersion.cmake"
+            "${GLFW_BINARY_DIR}/src/glfw3ConfigVersion.cmake"
             DESTINATION lib${LIB_SUFFIX}/cmake/glfw)
 
     install(EXPORT glfwTargets DESTINATION lib${LIB_SUFFIX}/cmake/glfw)
@@ -576,11 +575,10 @@ if (GLFW_INSTALL)
     # Only generate this target if no higher-level project already has
     if (NOT TARGET uninstall)
         configure_file("${GLFW_SOURCE_DIR}/cmake_uninstall.cmake.in"
-                       "${GLFW_BINARY_DIR}/cmake_uninstall.cmake" IMMEDIATE @ONLY)
+                "${GLFW_BINARY_DIR}/cmake_uninstall.cmake" IMMEDIATE @ONLY)
 
         add_custom_target(uninstall
-                          "${CMAKE_COMMAND}" -P
-                          "${GLFW_BINARY_DIR}/cmake_uninstall.cmake")
+                "${CMAKE_COMMAND}" -P
+                "${GLFW_BINARY_DIR}/cmake_uninstall.cmake")
     endif()
 endif()
-

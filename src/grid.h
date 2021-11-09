@@ -10,7 +10,10 @@
 using namespace CGL;
 using namespace std;
 
-struct Grid {
+class Grid {
+
+public:
+
     Grid() {}
 
     Grid(int width, int height);
@@ -26,13 +29,20 @@ struct Grid {
     int width;
     Vector2D cursor_pos;
 
+    void simulate(double timestep, const vector<Vector2D>& external_forces);
+
+private:
+    vector<Vector2D> simulate_velocity(double timestep, const vector<Vector2D>& external_forces);
+    vector<double> simulate_density(double timestep, const vector<Vector2D>& external_forces);
+
     int num_iter;
 
     vector<double> density;
     vector<double> temperature;
     vector<Vector2D> velocity;
 
-    void simulate(double timestep);
+
+public:
 
     double getDensity(int x, int y) const { return density[y * width + x]; }
 
@@ -42,6 +52,10 @@ struct Grid {
 
     Vector2D getVelocity(int x, int y) const { return velocity[y * width + x]; }
 
+    Vector2D getVelocity(Vector2D vec) const {
+        return velocity[vec[1] * width + vec[0]];
+    };
+
     double getTemperature(int x, int y) const { return temperature[y * width + x]; }
 
     void setDensity(int x, int y, double den);
@@ -50,13 +64,8 @@ struct Grid {
 
     void setTemperature(int x, int y, double temp);
 
-    void possion(double alpha, double beta, Vector2D coords);
-
-    void copyGrid(Grid g);
-
     void printGrid();
-
 };
 
 
-#endif /* grid_h */
+#endif

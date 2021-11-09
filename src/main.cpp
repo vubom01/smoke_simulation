@@ -1,6 +1,7 @@
 #include <iostream>
 #include <random>
 #include <chrono>
+#include <algorithm>
 #include <GLFW/glfw3.h>
 
 #include "grid.h"
@@ -11,9 +12,9 @@ static std::random_device rd;
 static mt19937 rng(rd());
 
 Grid grid;
+bool mouse_down = false;
 
-// starts a smoke at a random location
-void randomize_grid(Grid &grid, int num_speckle = 3, int size = 5) {
+void randomize_grid(Grid &grid, int num_speckle = 3, int size = 3) {
     uni_dis dis_x(0, NUMCOL - size);
     uni_dis dis_y(0, NUMROW - size);
     uni_dis dis_density(25, 75);
@@ -25,7 +26,8 @@ void randomize_grid(Grid &grid, int num_speckle = 3, int size = 5) {
         double chosen_density = dis_density(rng);
         for (int i = 0; i < chosen_size; ++i) {
             for (int j = 0; j < chosen_size; ++j) {
-                grid.setDensity(chosen_x + i, chosen_y + j, grid.getDensity(chosen_x + i, chosen_y + j) + chosen_density);
+                grid.setDensity(chosen_x + i, chosen_y + j,
+                                grid.getDensity(chosen_x + i, chosen_y + j) + chosen_density);
             }
         }
     }
@@ -58,6 +60,11 @@ void display(const Grid &grid) {
 int main() {
     grid = Grid(NUMCOL, NUMROW);
 
+    vector<Vector2D> external_forces;
+    external_forces.resize(grid.width * grid.height, Vector2D(0.0, 0.0));
+    int size_smoke = 2;
+    double amount_smoke = 50;
+
     GLFWwindow *window;
     if (!glfwInit()) {
         return -1;
@@ -71,14 +78,11 @@ int main() {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    // Callback functions
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
 
     auto last_time = steady_clock::now();
     while (!glfwWindowShouldClose(window)) {
-        auto cur_time = steady_clock::now();
-        auto elapsed = duration_cast<milliseconds>(cur_time - last_time);
 
         if (mouse_down) {
             double xpos = grid.cursor_pos[0];
@@ -87,17 +91,23 @@ int main() {
             int row = int(NUMROW - NUMROW * ypos / double(WINDOW_HEIGHT));
             int col = int(NUMCOL * xpos / double(WINDOW_WIDTH));
 
-            double den = grid.getDensity(col, row);
-            grid.setDensity(col, row, std::max(den + 25, 100.0));
+            for (int y = row - size_smoke; y < row + size_smoke; ++y) {
+                for (int x = col - size_smoke; x < col + size_smoke; ++x) {
+                    if (y < 0 || y >= grid.height || x < 0 || x >= grid.width) {
+                        continue;
+                    }
+                    double den = grid.getDensity(x, y);
+                    grid.setDensity(x, y, min(den + amount_smoke, 100.0));
+                }
+            }
         }
 
-        if (FREQ * elapsed.count() >= 1000) {
-            //std::cout << "Update the grid" << std::endl;
-            last_time = cur_time;
-            grid.simulate(1);
-            randomize_grid(grid, 1, 15);
+        auto cur_time = steady_clock::now();
+        auto elapsed = duration_cast<milliseconds>(cur_time - last_time);
 
-            //grid.printGrid();
+        if (FREQ * elapsed.count() >= 1000) {
+            last_time = cur_time;
+            grid.simulate(1, external_forces);
         }
         display(grid);
         glfwSwapBuffers(window);

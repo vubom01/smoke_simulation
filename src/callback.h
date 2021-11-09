@@ -2,13 +2,13 @@
 #define callback_h
 
 extern Grid grid;
-extern bool mouse_down = false;
+extern bool mouse_down;
 
-void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
+void cursor_position_callback(GLFWwindow *window, double xpos, double ypos) {
     glfwGetCursorPos(window, &grid.cursor_pos[0], &grid.cursor_pos[1]);
 }
 
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
 
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         if (action == GLFW_PRESS) {
