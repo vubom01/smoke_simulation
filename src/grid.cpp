@@ -91,6 +91,7 @@ vector<double> Grid::simulate_density(const double timestep, const vector<Vector
     vector<double> combined_density(width * height, 0.0);
 
     vector<double> advection_grid(width * height, 0.0);
+#pragma omp parallel for
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             Vector2D reverse_velocity = -getVelocity(x, y) * timestep;
@@ -126,11 +127,12 @@ vector<Vector2D> Grid::simulate_velocity(const double timestep, const vector<Vec
 
     vector<Vector2D> combined_velocity(width * height, Vector2D(0, 0));
     vector<Vector2D> self_advection_grid(width * height, Vector2D(0, 0));
+#pragma omp parallel for
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             Vector2D reverse_velocity = -getVelocity(x, y) * timestep;
             if (x + reverse_velocity[0] < 0 || x + reverse_velocity[0] > width - 2 || y + reverse_velocity[1] < 0 ||
-                y + reverse_velocity[1] > height - 2) {
+                y + reverse_velocity[1] > height - 2) { // TODO didn't care about boundary grids
                 continue;
             } else {
                 double newx = x + reverse_velocity[0];
@@ -165,6 +167,7 @@ vector<Vector2D> Grid::simulate_velocity(const double timestep, const vector<Vec
     double alpha = 1 / (timestep * num_iter);
     double beta = 4 + alpha;
     for (int iter = 0; iter < num_iter; ++iter) {
+#pragma omp parallel for
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
                 if (x == 0 || x == width - 1 || y == 0 || y == height - 1) {
@@ -186,6 +189,7 @@ vector<Vector2D> Grid::simulate_velocity(const double timestep, const vector<Vec
 
     vector<double> divergence(width * height, 0.0);
     double halfrdx = 0.5;
+#pragma omp parallel for
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             Vector2D wL = getVelocity(x - 1, y);
@@ -202,6 +206,7 @@ vector<Vector2D> Grid::simulate_velocity(const double timestep, const vector<Vec
     alpha = -1;
     beta = 4;
     for (int iter = 0; iter < num_iter; ++iter) {
+#pragma omp parallel for
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
                 if (x == 0 || x == width - 1 || y == 0 || y == height - 1) {
@@ -221,6 +226,7 @@ vector<Vector2D> Grid::simulate_velocity(const double timestep, const vector<Vec
         tem_2.swap(pressure);
     }
 
+#pragma omp parallel for
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             double &pL = pressure[y * width + x - 1];

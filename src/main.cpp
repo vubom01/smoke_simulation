@@ -13,6 +13,9 @@ static mt19937 rng(rd());
 
 Grid grid;
 bool mouse_down = false;
+bool shift_pressed = false;
+int size_smoke = 2;
+double amount_smoke = 50;
 
 void randomize_grid(Grid &grid, int num_speckle = 3, int size = 3) {
     uni_dis dis_x(0, NUMCOL - size);
@@ -33,14 +36,16 @@ void randomize_grid(Grid &grid, int num_speckle = 3, int size = 3) {
     }
 }
 
-void display(const Grid &grid) {
+void display(const Grid &grid, int LIMIT = 3) {
     glClear(GL_COLOR_BUFFER_BIT);
     double width = 1 / (double) NUMCOL * 2;
     double height = 1 / (double) NUMROW * 2;
-
     for (int y = 0; y < NUMROW; ++y) {
         for (int x = 0; x < NUMCOL; ++x) {
-            glColor3d(grid.getDensity(x, y) / 100, grid.getDensity(x, y) / 100, grid.getDensity(x, y) / 100);
+            double density = grid.getDensity(x, y);
+            if (density <= LIMIT) continue;
+
+            glColor3d(density / 100, density / 100, density / 100);
 
             glBegin(GL_QUADS);
             double bottom_left_x = -1 + width * x;
@@ -58,12 +63,11 @@ void display(const Grid &grid) {
 }
 
 int main() {
+
     grid = Grid(NUMCOL, NUMROW);
 
     vector<Vector2D> external_forces;
     external_forces.resize(grid.width * grid.height, Vector2D(0.0, 0.0));
-    int size_smoke = 2;
-    double amount_smoke = 50;
 
     GLFWwindow *window;
     if (!glfwInit()) {
@@ -80,17 +84,27 @@ int main() {
 
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetKeyCallback(window, keyboard_callback);
+
+#if defined(_OPENMP)
+#pragma omp parallel
+    {
+        int rank, rankn;
+        rank = omp_get_thread_num();
+        rankn = omp_get_num_threads();
+    }
+#endif
 
     auto last_time = steady_clock::now();
     while (!glfwWindowShouldClose(window)) {
 
+        bool to_print = ((rng() % 100) == 0) && (omp_get_thread_num() == 0);
         if (mouse_down) {
             double xpos = grid.cursor_pos[0];
             double ypos = grid.cursor_pos[1];
 
             int row = int(NUMROW - NUMROW * ypos / double(WINDOW_HEIGHT));
             int col = int(NUMCOL * xpos / double(WINDOW_WIDTH));
-
             for (int y = row - size_smoke; y < row + size_smoke; ++y) {
                 for (int x = col - size_smoke; x < col + size_smoke; ++x) {
                     if (y < 0 || y >= grid.height || x < 0 || x >= grid.width) {
@@ -107,9 +121,22 @@ int main() {
 
         if (FREQ * elapsed.count() >= 1000) {
             last_time = cur_time;
+
+            auto start_time = steady_clock::now();
+
             grid.simulate(1, external_forces);
+
+            auto end_time = steady_clock::now();
+            auto simulate_time = duration_cast<milliseconds>(end_time - start_time);
         }
+
+        auto start_time = steady_clock::now();
+
         display(grid);
+
+        auto end_time = steady_clock::now();
+        auto display_time = duration_cast<milliseconds>(end_time - start_time);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
