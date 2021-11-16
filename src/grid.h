@@ -29,11 +29,17 @@ public:
     int width;
     Vector2D cursor_pos;
 
-    void simulate(double timestep, const vector<Vector2D>& external_forces);
+    void simulate(double timestep, const vector<Vector2D>& external_forces, const double ambient_temperature);
 
 private:
-    vector<Vector2D> simulate_velocity(double timestep, const vector<Vector2D>& external_forces);
-    vector<double> simulate_density(double timestep, const vector<Vector2D>& external_forces);
+    vector<Vector2D> simulate_velocity(double timestep, const vector<Vector2D>& external_forces, const double ambient_temperature);
+    vector<double> simulate_density(double timestep);
+    vector<double> simulate_temperature(double timestep);
+
+    void set_boundary_conditions(vector<Vector2D> &vec, int b);
+    void set_boundary_conditions(vector<double> &vec, int b);
+
+    int cell(int x, int y);
 
     int num_iter;
 
@@ -43,6 +49,8 @@ private:
 
 
 public:
+
+    void display(int LIMIT);
 
     double getDensity(int x, int y) const { return density[y * width + x]; }
 
@@ -57,6 +65,8 @@ public:
     };
 
     double getTemperature(int x, int y) const { return temperature[y * width + x]; }
+
+    double getTemperature(Vector2D vec) const { return temperature[vec[1] * width + vec[0]]; }
 
     void setDensity(int x, int y, double den);
 

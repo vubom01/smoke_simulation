@@ -2,20 +2,24 @@
 #include <random>
 #include <chrono>
 #include <algorithm>
+#include <math.h>
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 
 #include "grid.h"
 #include "common.h"
 #include "callback.h"
+#include "color.h"
 
 static std::random_device rd;
+
 static mt19937 rng(rd());
 
 Grid grid;
 bool mouse_down = false;
+bool is_pause = false;
 bool shift_pressed = false;
-int size_smoke = 2;
+int size_smoke = 5;
 double amount_smoke = 50;
 
 void randomize_grid(Grid &grid, int num_speckle = 3, int size = 3) {
@@ -37,16 +41,24 @@ void randomize_grid(Grid &grid, int num_speckle = 3, int size = 3) {
     }
 }
 
-void display(const Grid &grid, int LIMIT = 3) {
+void Grid::display(int LIMIT = 3) {
     glClear(GL_COLOR_BUFFER_BIT);
     double width = 1 / (double) NUMCOL * 2;
     double height = 1 / (double) NUMROW * 2;
     for (int y = 0; y < NUMROW; ++y) {
         for (int x = 0; x < NUMCOL; ++x) {
-            double density = grid.getDensity(x, y);
+
+            double density = this->getDensity(x, y);
+            double temperature = this->getTemperature(x, y);
             if (density <= LIMIT) continue;
 
-            glColor3d(density / 100, density / 100, density / 100);
+            double hue = 360 - temperature * 0.6;
+            double saturate = 100.0;
+            double value = density;
+
+            Vector3D rgb = hsv2rgb({hue, saturate, value});
+
+            glColor3d(rgb.x, rgb.y, rgb.z);
 
             glBegin(GL_QUADS);
             double bottom_left_x = -1 + width * x;
@@ -64,11 +76,13 @@ void display(const Grid &grid, int LIMIT = 3) {
 }
 
 int main() {
-
-    grid = Grid(NUMCOL, NUMROW);
+    grid = Grid(NUMCOL + 2, NUMROW + 2);
 
     vector<Vector2D> external_forces;
     external_forces.resize(grid.width * grid.height, Vector2D(0.0, 0.0));
+
+    double amount_temp = 50;
+    double ambient_temperature = 0;
 
     GLFWwindow *window;
     if (!glfwInit()) {
@@ -98,50 +112,65 @@ int main() {
 
     auto last_time = steady_clock::now();
     while (!glfwWindowShouldClose(window)) {
+        //bool to_print = ((rng() % 100) == 0) && (omp_get_thread_num() == 0);
 
-        bool to_print = ((rng() % 100) == 0) && (omp_get_thread_num() == 0);
         if (mouse_down) {
             double xpos = grid.cursor_pos[0];
             double ypos = grid.cursor_pos[1];
 
             int row = int(NUMROW - NUMROW * ypos / double(WINDOW_HEIGHT));
             int col = int(NUMCOL * xpos / double(WINDOW_WIDTH));
-            for (int y = row - size_smoke; y < row + size_smoke; ++y) {
-                for (int x = col - size_smoke; x < col + size_smoke; ++x) {
-                    if (y < 0 || y >= grid.height || x < 0 || x >= grid.width) {
+
+            for (int y = row - size_smoke; y <= row + size_smoke; ++y) {
+                for (int x = col - size_smoke; x <= col + size_smoke; ++x) {
+                    double dis2 = pow(y-row, 2.0) + pow(x-col, 2.0);
+
+                    if (y < 1 || y >= grid.height - 1 || x < 1 || x >= grid.width - 1 || (dis2 > size_smoke*size_smoke)) {
                         continue;
                     }
+
+                    double fall_off = 2 * 1.0 / max(dis2, 1.0);
+
                     double den = grid.getDensity(x, y);
-                    grid.setDensity(x, y, min(den + amount_smoke, 100.0));
+                    double temp = grid.getTemperature(x, y);
+
+                    grid.setDensity(x, y, min(den + amount_smoke * fall_off, 100.0));
+                    grid.setTemperature(x, y, min(temp + amount_temp * fall_off, 100.0));
+
                 }
             }
         }
-
         auto cur_time = steady_clock::now();
         auto elapsed = duration_cast<milliseconds>(cur_time - last_time);
 
-        if (FREQ * elapsed.count() >= 1000) {
-            last_time = cur_time;
+        if (!is_pause) {
+            if (FREQ * elapsed.count() >= 1000) {
+                last_time = cur_time;
+                auto start_time = steady_clock::now();
+                grid.simulate(1, external_forces, ambient_temperature);
+                auto end_time = steady_clock::now();
+                auto simulate_time = duration_cast<milliseconds>(end_time - start_time);
 
-            auto start_time = steady_clock::now();
-
-            grid.simulate(1, external_forces);
-
-            auto end_time = steady_clock::now();
-            auto simulate_time = duration_cast<milliseconds>(end_time - start_time);
+                //            if (to_print) {
+                //                printf("simulate_time = %lld mm\n", simulate_time.count());
+                //            }
+            } else {
+                //            if (to_print) {
+                //                puts("no simulate_time");
+                //            }
+            }
         }
 
         auto start_time = steady_clock::now();
-
-        display(grid);
-
+        grid.display();
         auto end_time = steady_clock::now();
         auto display_time = duration_cast<milliseconds>(end_time - start_time);
-
+//        if (to_print) {
+//            printf("display_time = %lld mm\n", display_time.count());
+//        }
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
     glfwTerminate();
     return 0;
 }
