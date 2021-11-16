@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <math.h>
 #include <GLFW/glfw3.h>
-#include <imgui.h>
 
 #include "grid.h"
 #include "common.h"
