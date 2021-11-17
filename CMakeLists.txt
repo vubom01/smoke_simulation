@@ -2,7 +2,7 @@
 # Kayvon Fatahalian, Keenan Crane,
 # Sky Gao, Bryce Summers, Michael Choquette.
 cmake_minimum_required(VERSION 3.2)
-project(HW0)
+project(smoke_simulation)
 
 #-------------------------------------------------------------------------------
 # Build options
