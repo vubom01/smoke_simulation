@@ -5,14 +5,25 @@ extern Grid grid;
 extern bool mouse_down;
 extern bool is_pause;
 extern bool shift_pressed;
+extern bool is_modify_vf;
+extern bool reset;
+extern Vector2D enter_cell;
+extern Vector2D exit_cell;
 extern int size_smoke;
 extern double amount_smoke;
+extern nanogui::Screen *screen;
 
 void cursor_position_callback(GLFWwindow *window, double xpos, double ypos) {
-    glfwGetCursorPos(window, &grid.cursor_pos[0], &grid.cursor_pos[1]);
+    screen->cursorPosCallbackEvent(xpos, ypos);
+    glfwGetCursorPos(window, &grid.cursor_pos.x, &grid.cursor_pos.y);
+}
+
+void error_callback(int error, const char* description) {
+    puts(description);
 }
 
 void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
+    screen->mouseButtonCallbackEvent(button, action, mods);
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         if (action == GLFW_PRESS) {
             mouse_down = true;
@@ -23,6 +34,7 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
 }
 
 void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+    screen->keyCallbackEvent(key, scancode, action, mods);
     if (action == GLFW_PRESS) {
         switch (key) {
             case GLFW_KEY_LEFT_SHIFT :
@@ -49,6 +61,12 @@ void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, in
                 break;
             case GLFW_KEY_P:
                 is_pause = !is_pause;
+                break;
+            case GLFW_KEY_M:
+                is_modify_vf = !is_modify_vf;
+                break;
+            case GLFW_KEY_R:
+                reset = true;
                 break;
             default:
                 break;
