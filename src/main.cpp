@@ -3,17 +3,15 @@
 #include <chrono>
 #include <algorithm>
 #include <math.h>
-//#include <GLFW/glfw3.h>
-#include <nanogui/nanogui.h>
 
-//#include <OpenGL/gl.h>
-//#include <OpenGL/OpenGL.h>
+#include <nanogui/nanogui.h>
 #include <CGL/CGL.h>
 
 #include "grid.h"
 #include "common.h"
 #include "callback.h"
 #include "color.h"
+#include "smoke_screen.h"
 
 using namespace nanogui;
 using namespace std;
@@ -28,19 +26,20 @@ bool is_pause = false;
 bool shift_pressed = false;
 bool is_modify_vf = false;
 bool reset = false;
-Vector2D enter_cell = Vector2D(0,0);
-Vector2D exit_cell = Vector2D(0,0);
+Vector2D enter_cell = Vector2D(0, 0);
+Vector2D exit_cell = Vector2D(0, 0);
 
-int size_smoke = 5;
+int size_smoke = 5 * 2;
 double amount_smoke = 90;
 double amount_temperature = 50;
 double ambient_temperature = 0;
+Vector3D global_rgb;
 
-int size_mouse = 1;
+int size_mouse = 3 * 2;
 
 bool test = true;
 
-GLuint VBOs[NUMCOL * NUMROW], VAOs[NUMCOL * NUMROW], EBOs[NUMCOL * NUMROW];
+GLuint VBOs[NUMCOL * NUMROW], VAOs[NUMCOL * NUMROW], EBO[NUMCOL * NUMROW];
 
 GLFWwindow *window = nullptr;
 Screen *screen = nullptr;
@@ -65,12 +64,12 @@ void randomize_grid(Grid &grid, int num_speckle = 3, int size = 3) {
 }
 
 void generate_vertices_array() {
-    double width = 1 / (double) NUMCOL * 2;
-    double height = 1 / (double) NUMROW * 2;
     GLuint elements[] = {
             0, 1, 2,
             2, 3, 0
     };
+    double width = 1 / (double) NUMCOL * 2;
+    double height = 1 / (double) NUMROW * 2;
     for (int y = 0; y < NUMROW; ++y) {
         for (int x = 0; x < NUMCOL; ++x) {
             float bottom_left_x = -1 + width * x;
@@ -80,19 +79,22 @@ void generate_vertices_array() {
                     bottom_left_x, bottom_left_y + float(height), 0, // top left
                     bottom_left_x + float(width), bottom_left_y + float(height), 0, // top right
                     bottom_left_x + float(width), bottom_left_y, 0, // bottom right
-                    bottom_left_x + float(width), bottom_left_y, 0, // bottom right
                     bottom_left_x, bottom_left_y, 0, // bottom left
-                    bottom_left_x, bottom_left_y + float(height), 0, // top left
             };
             int index = y * NUMCOL + x;
             glBindVertexArray(VAOs[index]);
             glBindBuffer(GL_ARRAY_BUFFER, VBOs[index]);
             glBufferData(GL_ARRAY_BUFFER, sizeof(rectangle_vertices), rectangle_vertices,
                          GL_STATIC_DRAW); // TODO not sure if GL_DYNAMIC_DRAW is better
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[index]);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
             glEnableVertexAttribArray(0);
         }
     }
+    glBindVertexArray(0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void set_callback() {
@@ -157,13 +159,12 @@ GLuint build_shader_program() {
 int main() {
     grid = Grid(NUMCOL + 2, NUMROW + 2);
 
-    vector<Vector2D> external_forces(grid.width*grid.height, Vector2D(0, 0));
+    vector<Vector2D> external_forces(grid.width * grid.height, Vector2D(0, 0));
 
     glfwSetErrorCallback(error_callback);
     if (!glfwInit()) {
         return -1;
     }
-//    glfwSetTime(0);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -187,29 +188,10 @@ int main() {
     GLuint shader_program = build_shader_program();
     glGenVertexArrays(NUMCOL * NUMROW, VAOs);
     glGenBuffers(NUMCOL * NUMROW, VBOs);
-    glGenBuffers(NUMCOL * NUMROW, EBOs);
+    glGenBuffers(NUMCOL * NUMROW, EBO);
     generate_vertices_array();
-    screen = new Screen();
-    screen->initialize(window, true);
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    glViewport(0, 0, width, height);
-
-    bool enabled = true;
-    FormHelper *gui = new FormHelper(screen);
-    nanogui::ref<Window> nanoguiWindow = gui->addWindow(Eigen::Vector2i(10, 10), "Adjustable parameters");
-    gui->addGroup("Smoke");
-    gui->addVariable("Size of smoke (1 to 20)", size_smoke);
-    gui->addVariable("Density of smoke (0 to 100)", amount_smoke);
-    gui->addVariable("Temperature of smoke (0 to 100)", amount_temperature);
-    gui->addVariable("Ambient temperature (0 to 100)", ambient_temperature);
-
-    screen->setVisible(true);
-    screen->performLayout();
-    nanoguiWindow->center();
-
+    screen = new SmokeScreen(window);
     set_callback();
-
 
 #if defined(_OPENMP)
 #pragma omp parallel
@@ -226,7 +208,7 @@ int main() {
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-
+        glClear(GL_COLOR_BUFFER_BIT);
         if (reset) {
             reset = false;
             fill(external_forces.begin(), external_forces.end(), Vector2D(0, 0));
@@ -258,7 +240,7 @@ int main() {
                             if (y < 1 || x < 1 || y >= grid.height - 1 || x >= grid.width - 1) {
                                 continue;
                             }
-                            external_forces[y*grid.width + x] = direction_mouse_drag.unit();
+                            external_forces[y * grid.width + x] = direction_mouse_drag.unit();
                         }
                     }
                     enter_cell = exit_cell;
@@ -279,7 +261,9 @@ int main() {
                             continue;
                         }
 
-                        double fall_off = 2 * 1.0 / max(dis2, 1.0);
+
+                        dis2 /= pow((NUMCOL / 100.0), 2.0);
+                        double fall_off = 2.0 / max(dis2, 1.0);
 
                         double den = grid.getDensity(x, y);
                         double temp = grid.getTemperature(x, y);
@@ -300,7 +284,6 @@ int main() {
                 grid.simulate(1, external_forces, ambient_temperature);
                 auto end_time = steady_clock::now();
                 auto simulate_time = duration_cast<milliseconds>(end_time - start_time);
-            } else {
             }
         }
 
@@ -310,14 +293,17 @@ int main() {
         if (is_modify_vf) {
             for (int y = 0; y < NUMROW; ++y) {
                 for (int x = 0; x < NUMCOL; ++x) {
-                    Vector2D accumulated_direction = Vector2D(0.0,0.0);
-                    for (int ys = y; ys < y + 1; ys++) {
-                        for (int xs = x; xs < x + 1; xs++) {
+                    Vector2D accumulated_direction = Vector2D(0.0, 0.0);
+                    int count = 0;
+                    for (int ys = -1 + y; ys <= y + 1; ys++) {
+                        for (int xs = -1 + x; xs <= x + 1; xs++) {
                             if (ys >= 0 && xs >= 0 && ys < NUMROW && xs < NUMCOL) {
-                                accumulated_direction += external_forces[ys*grid.width + xs];
+                                accumulated_direction += external_forces[ys * grid.width + xs];
+                                ++count;
                             }
                         }
                     }
+
                     double hue = 0;
                     double saturate = 100;
                     double value = 100;
@@ -325,19 +311,20 @@ int main() {
                         value = 0;
                     } else {
                         accumulated_direction = accumulated_direction.unit();
-                        double angle = accumulated_direction.y >= 0 ? acos(accumulated_direction.x) : acos(accumulated_direction.x) + PI;
+                        double angle =
+                                accumulated_direction.y >= 0 ? acos(accumulated_direction.x) : acos(accumulated_direction.x) + PI;
                         angle = angle * 180 / PI;
                         hue = angle;
                     }
 
-                    Vector3D rgb = hsv2rgb({hue, saturate, value});
+                    global_rgb = hsv2rgb({hue, saturate, value});
 
                     int index = y * NUMCOL + x;
 
                     int vertexColorLocation = glGetUniformLocation(shader_program, "ourColor");
-                    glUniform4f(vertexColorLocation, rgb.x, rgb.y, rgb.z, 1.0f);
+                    glUniform4f(vertexColorLocation, global_rgb.x, global_rgb.y, global_rgb.z, 1.0f);
                     glBindVertexArray(VAOs[index]);
-                    glDrawArrays(GL_TRIANGLES, 0, 6);
+                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
                 }
             }
         } else {
@@ -346,7 +333,7 @@ int main() {
                     double density = grid.getDensity(x, y);
                     double temperature = grid.getTemperature(x, y);
 
-                    double hue = ((int)(450.0 - temperature * 1)) % 360;
+                    double hue = ((int) (450.0 - temperature * 1)) % 360;
                     double saturate = 100.0;
                     double value = density;
 
@@ -357,7 +344,7 @@ int main() {
                     int vertexColorLocation = glGetUniformLocation(shader_program, "ourColor");
                     glUniform4f(vertexColorLocation, rgb.x, rgb.y, rgb.z, 1.0f);
                     glBindVertexArray(VAOs[index]);
-                    glDrawArrays(GL_TRIANGLES, 0, 6);
+                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
                 }
             }
         }
@@ -371,6 +358,8 @@ int main() {
     }
     glDeleteVertexArrays(NUMCOL * NUMROW, VAOs);
     glDeleteBuffers(NUMCOL * NUMROW, VBOs);
+    glDeleteBuffers(NUMCOL * NUMROW, EBO);
+
     glfwTerminate();
     return 0;
 }
