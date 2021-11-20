@@ -2,22 +2,24 @@
 #include <CGL/CGL.h>
 #include "common.h"
 
-using namespace nanogui;
 
 extern int size_smoke;
 extern double amount_smoke;
 extern double amount_temperature;
 extern double ambient_temperature;
 extern Vector3D global_rgb;
+Vector3D picked_rgb;
 
 class SmokeScreen : public nanogui::Screen {
 public:
 
-    SmokeScreen(GLFWwindow *window) {
+    SmokeScreen(GLFWwindow *glfw_window) {
+        using namespace nanogui;
+        using namespace std;
 
-        this->initialize(window, true);
+        this->initialize(glfw_window, true);
         int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
+        glfwGetFramebufferSize(glfw_window, &width, &height);
         glViewport(0, 0, width, height);
 
         bool enabled = true;
@@ -29,32 +31,16 @@ public:
         gui->addVariable("Heat(0 to 100)", amount_temperature);
         gui->addVariable("Ambient(0 to 100)", ambient_temperature);
 
-        // Color Wheel
         TabWidget *tabWidget = this->add<TabWidget>();
         Widget *layer = tabWidget->createTab("Color Wheel");
-        layer->setLayout(new GroupLayout());
+        layer->setLayout(new GroupLayout(8));
+
         layer->add<Label>("Color wheel widget", "sans-bold");
-        layer->add<ColorWheel>();
-        layer = tabWidget->createTab("Function Graph");
-        layer->setLayout(new GroupLayout());
-        layer->add<Label>("Function graph widget", "sans-bold");
+        ColorWheel* color_wheel = layer->add<ColorWheel>();
+        color_wheel->setCallback([&](const nanogui::Color& color){
+            picked_rgb = Vector3D(color.r(), color.g(), color.b());
+        });
 
-        layer = tabWidget->createTab("Function Graph");
-        layer->setLayout(new GroupLayout());
-
-        layer->add<Label>("Function graph widget", "sans-bold");
-
-        Graph *graph = layer->add<Graph>("Some Function");
-
-        graph->setHeader("E = 2.35e-3");
-        graph->setFooter("Iteration 89");
-        VectorXf &func = graph->values();
-        func.resize(100);
-        for (int i = 0; i < 100; ++i)
-            func[i] = 0.5f * (0.5f * std::sin(i / 10.f) +
-                              0.5f * std::cos(i / 23.f) + 1);
-
-        tabWidget->createTab("+");
 
         this->setVisible(true);
         this->performLayout();

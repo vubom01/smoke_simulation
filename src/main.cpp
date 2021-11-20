@@ -3,8 +3,8 @@
 #include <chrono>
 #include <algorithm>
 #include <math.h>
-
 #include <nanogui/nanogui.h>
+
 #include <CGL/CGL.h>
 
 #include "grid.h"
@@ -34,6 +34,7 @@ double amount_smoke = 90;
 double amount_temperature = 50;
 double ambient_temperature = 0;
 Vector3D global_rgb;
+extern Vector3D picked_rgb;
 
 int size_mouse = 3 * 2;
 
@@ -261,7 +262,6 @@ int main() {
                             continue;
                         }
 
-
                         dis2 /= pow((NUMCOL / 100.0), 2.0);
                         double fall_off = 2.0 / max(dis2, 1.0);
 
@@ -293,6 +293,7 @@ int main() {
         if (is_modify_vf) {
             for (int y = 0; y < NUMROW; ++y) {
                 for (int x = 0; x < NUMCOL; ++x) {
+
                     Vector2D accumulated_direction = Vector2D(0.0, 0.0);
                     int count = 0;
                     for (int ys = -1 + y; ys <= y + 1; ys++) {
@@ -333,16 +334,23 @@ int main() {
                     double density = grid.getDensity(x, y);
                     double temperature = grid.getTemperature(x, y);
 
-                    double hue = ((int) (450.0 - temperature * 1)) % 360;
+                    double hue_center = 400;
+                    double hue_halfspan = 50;
+                    if (picked_rgb.norm() > EPS) {
+                        Vector3D picked_hsv = rgb2hsv(picked_rgb);
+                        hue_center = picked_hsv.x;
+                    }
+
+                    double hue = (int) (hue_center - (temperature - hue_halfspan)) % 360;
                     double saturate = 100.0;
                     double value = density;
 
-                    Vector3D rgb = hsv2rgb({hue, saturate, value});
+                    global_rgb = hsv2rgb({hue, saturate, value});
 
                     int index = y * NUMCOL + x;
 
                     int vertexColorLocation = glGetUniformLocation(shader_program, "ourColor");
-                    glUniform4f(vertexColorLocation, rgb.x, rgb.y, rgb.z, 1.0f);
+                    glUniform4f(vertexColorLocation, global_rgb.x, global_rgb.y, global_rgb.z, 1.0f);
                     glBindVertexArray(VAOs[index]);
                     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
                 }
