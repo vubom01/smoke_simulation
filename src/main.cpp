@@ -127,7 +127,6 @@ void set_callback() {
     });
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
-    glfwSetKeyCallback(window, keyboard_callback);
     glfwSetWindowSizeCallback(window, window_size_callback);
 }
 
