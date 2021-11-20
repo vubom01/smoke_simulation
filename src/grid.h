@@ -29,10 +29,10 @@ public:
     int width;
     Vector2D cursor_pos;
 
-    void simulate(double timestep, const vector<Vector2D>& external_forces, const double ambient_temperature);
+    void simulate(double timestep, const vector<Vector2D>& external_forces, const double ambient_temperature, const double temperature_parameter, const double smoke_density_parameter, const double external_force_parameter, const double num_iter);
 
 private:
-    vector<Vector2D> simulate_velocity(double timestep, const vector<Vector2D>& external_forces, const double ambient_temperature);
+    vector<Vector2D> simulate_velocity(double timestep, const vector<Vector2D>& external_forces, const double ambient_temperature, const double temperature_parameter, const double smoke_density_parameter, const double external_force_parameter, const double num_iter);
     vector<double> simulate_density(double timestep);
     vector<double> simulate_temperature(double timestep);
 
@@ -40,8 +40,6 @@ private:
     void set_boundary_conditions(vector<double> &vec, int b);
 
     int cell(int x, int y);
-
-    int num_iter;
 
     vector<double> density;
     vector<double> temperature;
@@ -76,4 +74,4 @@ public:
 };
 
 
-#endif /* grid_h */
+#endif
