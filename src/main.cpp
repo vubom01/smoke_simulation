@@ -121,6 +121,7 @@ void set_callback() {
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetKeyCallback(window, keyboard_callback);
+    glfwSetWindowSizeCallback(window, window_size_callback);
 }
 
 GLuint build_shader_program() {
@@ -194,15 +195,6 @@ int main() {
     screen = new SmokeScreen(window);
     set_callback();
 
-#if defined(_OPENMP)
-#pragma omp parallel
-    {
-        int rank, rankn;
-        rank = omp_get_thread_num();
-        rankn = omp_get_num_threads();
-    }
-#endif
-
     glfwSwapInterval(1);
     glfwSwapBuffers(window);
     auto last_time = steady_clock::now();
@@ -261,6 +253,7 @@ int main() {
                             (dis2 > size_smoke * size_smoke)) {
                             continue;
                         }
+
 
                         dis2 /= pow((NUMCOL / 100.0), 2.0);
                         double fall_off = 2.0 / max(dis2, 1.0);

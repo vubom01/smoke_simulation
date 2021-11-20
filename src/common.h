@@ -11,8 +11,8 @@ using namespace std::chrono;
 const int NUMCOL = 100;
 const int NUMROW = 100;
 const int FREQ   = 20;
-const int WINDOW_WIDTH = 700;
-const int WINDOW_HEIGHT = 640;
+int WINDOW_WIDTH = 700;
+int WINDOW_HEIGHT = 640;
 const double EPS = 1e-3;
 
 const char *vertexShaderSource = "#version 330 core\n"

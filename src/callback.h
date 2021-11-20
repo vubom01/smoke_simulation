@@ -18,7 +18,7 @@ void cursor_position_callback(GLFWwindow *window, double xpos, double ypos) {
     glfwGetCursorPos(window, &grid.cursor_pos.x, &grid.cursor_pos.y);
 }
 
-void error_callback(int error, const char* description) {
+void error_callback(int error, const char *description) {
     puts(description);
 }
 
@@ -31,6 +31,11 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
             mouse_down = false;
         }
     }
+}
+
+void window_size_callback(GLFWwindow *main_window, int width, int height) {
+    WINDOW_WIDTH = width;
+    WINDOW_HEIGHT = height;
 }
 
 void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
