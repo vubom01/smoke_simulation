@@ -216,7 +216,10 @@ set(APPLICATION_SOURCE
         src/common.h
         src/color.h
         src/smoke_screen.h
-        src/common.cpp src/shader.h src/callback.cpp)
+        src/common.cpp
+        src/shader.h
+        src/callback.cpp
+        src/smoke_screen.cpp)
 
 #-------------------------------------------------------------------------------
 # Set include directories

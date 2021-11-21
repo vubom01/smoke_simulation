@@ -1,7 +1,7 @@
 #include "common.h"
 
-int Con::WINDOW_WIDTH = 1600; //700;
-int Con::WINDOW_HEIGHT = 960; //640;
+int Con::WINDOW_WIDTH = 1600;
+int Con::WINDOW_HEIGHT = 900;
 
 bool Con::mouse_down = false;
 bool Con::is_pause = false;
@@ -11,7 +11,7 @@ bool Con::reset = false;
 bool Con::debug = false;
 int Con::size_mouse = 3 * (Con::NUMROW / 100);
 
-int Con::size_smoke = 10;
+int Con::size_smoke = 6;
 double Con::amount_smoke = 90;
 double Con::amount_temperature = 50;
 double Con::ambient_temperature = 0;

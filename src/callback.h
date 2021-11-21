@@ -3,9 +3,10 @@
 
 #include "grid.h"
 #include "common.h"
+#include "smoke_screen.h"
 
 extern Grid grid;
-extern nanogui::Screen *screen;
+extern SmokeScreen *screen;
 extern vector<Vector2D> external_forces;
 
 void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
@@ -40,9 +41,11 @@ void keyboard_callback(GLFWwindow *window, int key, int scancode, int action, in
             case GLFW_KEY_M:
                 Con::is_modify_vf = !Con::is_modify_vf;
                 break;
-            case GLFW_KEY_R:
+            case GLFW_KEY_S:
                 Con::reset = true;
                 break;
+            case GLFW_KEY_R:
+                screen->reset_parameters();
             default:
                 break;
         }
