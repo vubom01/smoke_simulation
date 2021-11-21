@@ -1,8 +1,8 @@
 #ifndef common_h
 #define common_h
 
-#include "grid.h"
 #include "chrono"
+#include "grid.h"
 
 #include <random>
 #include <nanogui/nanogui.h>
@@ -14,7 +14,6 @@ using std::mt19937;
 using std::uniform_int_distribution;
 using uni_dis = uniform_int_distribution<int>;
 using namespace std::chrono;
-
 
 class Con {
 
@@ -35,6 +34,7 @@ public:
     static bool is_modify_vf;
     static bool reset;
     static bool debug;
+    static int size_mouse;
 
     static int size_smoke;
     static double amount_smoke;

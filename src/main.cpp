@@ -20,85 +20,18 @@ using namespace std;
 Grid grid;
 GLFWwindow *window = nullptr;
 Screen *screen = nullptr;
+vector<Vector2D> external_forces;
 
 static Vector3D rgb;
-static int size_mouse = 3 * (Con::NUMROW / 100);
 static bool test = true;
-static bool finished = false;
 
 extern void set_callback(GLFWwindow *);
 extern void error_callback(int error, const char *);
 
-void draw_mouse(vector<Vector2D> &external_forces) {
-
-    while (!finished) {
-        std::this_thread::sleep_for(milliseconds(5));
-        if (Con::is_modify_vf && !Con::mouse_down) {
-            double xpos = grid.cursor_pos.x;
-            double ypos = grid.cursor_pos.y;
-
-            int row = int(Con::NUMROW - Con::NUMROW * ypos / double(Con::WINDOW_HEIGHT));
-            int col = int(Con::NUMCOL * xpos / double(Con::WINDOW_WIDTH));
-
-            Con::enter_cell = Vector2D(col, row);
-        }
-
-        if (Con::mouse_down) {
-            if (Con::is_modify_vf) {
-                double xpos = grid.cursor_pos.x;
-                double ypos = grid.cursor_pos.y;
-
-                int row = int(Con::NUMROW - Con::NUMROW * ypos / double(Con::WINDOW_HEIGHT));
-                int col = int(Con::NUMCOL * xpos / double(Con::WINDOW_WIDTH));
-
-                Con::exit_cell = Vector2D(col, row);
-                if (Con::exit_cell.x != Con::enter_cell.x || Con::exit_cell.y != Con::enter_cell.y) {
-                    Vector2D direction_mouse_drag = Con::exit_cell - Con::enter_cell;
-                    for (int y = row - size_mouse; y < row + size_mouse; y++) {
-                        for (int x = col - size_mouse; x < col + size_mouse; x++) {
-                            if (y < 1 || x < 1 || y >= grid.height - 1 || x >= grid.width - 1) {
-                                continue;
-                            }
-                            external_forces[y * grid.width + x] = direction_mouse_drag.unit();
-                        }
-                    }
-                    Con::enter_cell = Con::exit_cell;
-                }
-            } else {
-                double xpos = grid.cursor_pos.x;
-                double ypos = grid.cursor_pos.y;
-
-                int row = int(Con::NUMROW - Con::NUMROW * ypos / double(Con::WINDOW_HEIGHT));
-                int col = int(Con::NUMCOL * xpos / double(Con::WINDOW_WIDTH));
-
-                for (int y = row - Con::size_smoke; y <= row + Con::size_smoke; ++y) {
-                    for (int x = col - Con::size_smoke; x <= col + Con::size_smoke; ++x) {
-                        double dis2 = pow(y - row, 2.0) + pow(x - col, 2.0);
-
-                        if (y < 1 || y >= grid.height - 1 || x < 1 || x >= grid.width - 1 ||
-                            (dis2 > Con::size_smoke * Con::size_smoke)) {
-                            continue;
-                        }
-
-                        dis2 /= pow((Con::NUMCOL / 100.0), 2.0);
-                        double fall_off = 1.0 / max(dis2, 1.0);
-
-                        double den = grid.getDensity(x, y);
-                        double temp = grid.getTemperature(x, y);
-                        grid.setDensity(x, y, min(den + Con::amount_smoke * fall_off, 100.0));
-                        grid.setTemperature(x, y, min(temp + Con::amount_temperature * fall_off, 100.0));
-
-                    }
-                }
-            }
-        }
-    }
-}
-
 int main() {
 
     grid = Grid(Con::NUMCOL + 2, Con::NUMROW + 2);
-    vector<Vector2D> external_forces(grid.width * grid.height, Vector2D(0, 0));
+    external_forces.resize(grid.width * grid.height, Vector2D(0, 0));
 
     glfwSetErrorCallback(error_callback);
     if (!glfwInit()) {
@@ -127,13 +60,11 @@ int main() {
     screen = new SmokeScreen(window);
     set_callback(window);
 
-    glfwSwapInterval(1); // To prevent screen tearing
+    glfwSwapInterval(1);
     glfwSwapBuffers(window);
     auto last_time = steady_clock::now();
     steady_clock::time_point rendering_start_time, rendering_end_time, simulation_start_time, simulation_end_time, cur_time;
     long long rendering_time, simulation_time;
-
-    auto mouse_th = std::thread(draw_mouse, std::ref(external_forces));
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -243,9 +174,6 @@ int main() {
     glDeleteBuffers(1, &Con::VBO);
     glDeleteBuffers(1, &Con::EBO);
     glDeleteTextures(1, &Con::texture);
-
-    finished = true;
-    mouse_th.join();
 
     glfwTerminate();
     return 0;
