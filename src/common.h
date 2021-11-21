@@ -19,11 +19,10 @@ class Con {
 
 public:
 
-    static constexpr int NUMCOL = 500;
-    static constexpr int NUMROW = 300;
+    static constexpr int NUMCOL = 420;
+    static constexpr int NUMROW = 250;
 
-    static constexpr int FREQ = 60;
-    static constexpr int DISPLAY_LIMIT = 1;
+    static constexpr int FREQ = 30;
     static constexpr double EPS = 1e-3;
 
     static int WINDOW_WIDTH;

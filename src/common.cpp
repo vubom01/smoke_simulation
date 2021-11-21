@@ -1,7 +1,7 @@
 #include "common.h"
 
-int Con::WINDOW_WIDTH = 1600;
-int Con::WINDOW_HEIGHT = 900;
+int Con::WINDOW_WIDTH = 1200;
+int Con::WINDOW_HEIGHT = 720;
 
 bool Con::mouse_down = false;
 bool Con::is_pause = false;

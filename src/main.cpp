@@ -148,16 +148,15 @@ int main() {
                     rgb = hsv2rgb({hue, saturate, value});
 
                     int index = y * Con::NUMCOL + x;
-                    data[index * 3] = max(rgb.x * 255, 0.0);
-                    data[index * 3 + 1] = max(rgb.y * 255, 0.0);
-                    data[index * 3 + 2] = max(rgb.z * 255, 0.0);
+                    data[index * 3] = (unsigned char) (rgb.x * 255);
+                    data[index * 3 + 1] = (unsigned char) (rgb.y * 255);
+                    data[index * 3 + 2] = (unsigned char) (rgb.z * 255);
                 }
             }
         } else {
             for (int y = 0; y < Con::NUMROW; ++y) {
                 for (int x = 0; x < Con::NUMCOL; ++x) {
                     double density = grid.getDensity(x, y);
-                    if (density <= Con::DISPLAY_LIMIT) continue;
                     double temperature = grid.getTemperature(x, y);
 
                     double hue_center = 400;
@@ -173,9 +172,9 @@ int main() {
                     rgb = hsv2rgb({hue, saturate, value});
 
                     int index = y * Con::NUMCOL + x;
-                    data[index * 3] = (unsigned char) max(rgb.x * 255, 0.0);
-                    data[index * 3 + 1] = (unsigned char) max(rgb.y * 255, 0.0);
-                    data[index * 3 + 2] = (unsigned char) max(rgb.z * 255, 0.0);
+                    data[index * 3] = (unsigned char) (rgb.x * 255);
+                    data[index * 3 + 1] = (unsigned char) (rgb.y * 255);
+                    data[index * 3 + 2] = (unsigned char) (rgb.z * 255);
                 }
             }
         }
