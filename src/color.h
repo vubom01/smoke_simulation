@@ -4,8 +4,6 @@
 #include "CGL/vector3D.h"
 #include "CGL/vector4D.h"
 
-using namespace CGL;
-
 template<typename T>
 int sgn(T val) {
     return (T(0) < val) - (val < T(0));
@@ -30,7 +28,7 @@ Vector3D hsv2rgb(Vector3D in) {
     long i;
     Vector3D out;
 
-    if (in.x < -EPS) in.x += 360.0;
+    if (in.x < -Con::EPS) in.x += 360.0;
     in.y /= 100.0, in.z /= 100.0;
 
     if (in.y <= 0.0) {

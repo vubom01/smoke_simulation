@@ -1,17 +1,6 @@
-#include <stdio.h>
-#include <iostream>
-#include "grid.h"
-#include <algorithm>
-#include <string>
 #include <memory>
-#include <random>
-#include "CGL/vector2D.h"
-
-using namespace std;
-using namespace CGL;
-
-static std::random_device rd;
-static mt19937 rng(rd());
+#include "common.h"
+#include "grid.h"
 
 double interpolate(double d1, double d2, double s);
 
@@ -27,7 +16,7 @@ Grid::Grid(int width, int height) {
     normal_distribution<double> dis_v_x(0, 3);
     this->velocity.resize(width * height, Vector2D(0, 0));
     for (int i = 0; i < width * height; ++i) {
-        this->velocity[i] = Vector2D(dis_v_x(rng), dis_v_y(rng));
+        this->velocity[i] = Vector2D(dis_v_x(Con::rng), dis_v_y(Con::rng));
     }
 }
 
@@ -66,7 +55,6 @@ Grid &Grid::operator=(Grid &&grid) {
 }
 
 void Grid::simulate(double timestep, const vector<Vector2D>& external_forces, const double ambient_temperature, const double temperature_parameter, const double smoke_density_parameter, const double external_force_parameter, const double num_iter) {
-
     vector<double> new_density = simulate_density(timestep);
 
     vector<double> new_temperature = simulate_temperature(timestep);
@@ -80,9 +68,7 @@ void Grid::simulate(double timestep, const vector<Vector2D>& external_forces, co
 
 vector<double> Grid::simulate_density(const double timestep) {
     vector<double> combined_density(width * height, 0.0);
-
     vector<double> advection_grid(width * height, 0.0);
-
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             Vector2D reverse_velocity = -getVelocity(x, y) * timestep;
@@ -147,7 +133,6 @@ vector<double> Grid::simulate_temperature(const double timestep) {
 }
 
 vector<Vector2D> Grid::simulate_velocity(double timestep, const vector<Vector2D>& external_forces, const double ambient_temperature, const double temperature_parameter, const double smoke_density_parameter, const double external_force_parameter, const double num_iter) {
-
     vector<Vector2D> combined_velocity(width * height, Vector2D(0, 0));
     vector<Vector2D> self_advection_grid(width * height, Vector2D(0, 0));
     for (int y = 0; y < height; ++y) {
@@ -206,7 +191,6 @@ vector<Vector2D> Grid::simulate_velocity(double timestep, const vector<Vector2D>
     }
 
     set_boundary_conditions(viscous_velocity_grid, -1);
-
 
     Vector2D buoyant_direction = Vector2D(0, 1);
 
@@ -328,4 +312,23 @@ void Grid::printGrid() {
         cout << s << endl;
     }
     cout << "____________" << endl;
+}
+
+void randomize_grid(Grid &grid, int num_speckle = 3, int size = 3) {
+    uni_dis dis_x(0, Con::NUMCOL - size);
+    uni_dis dis_y(0, Con::NUMROW - size);
+    uni_dis dis_density(25, 75);
+    uni_dis dis_size(1, size);
+    while (num_speckle--) {
+        int chosen_x = dis_x(Con::rng);
+        int chosen_y = dis_y(Con::rng);
+        int chosen_size = dis_size(Con::rng);
+        double chosen_density = dis_density(Con::rng);
+        for (int i = 0; i < chosen_size; ++i) {
+            for (int j = 0; j < chosen_size; ++j) {
+                grid.setDensity(chosen_x + i, chosen_y + j,
+                                grid.getDensity(chosen_x + i, chosen_y + j) + chosen_density);
+            }
+        }
+    }
 }

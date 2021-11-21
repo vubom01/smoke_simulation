@@ -1,172 +1,36 @@
 #include <iostream>
-#include <random>
 #include <chrono>
 #include <algorithm>
+#include <thread>
 #include <math.h>
 #include <nanogui/nanogui.h>
 
 #include <CGL/CGL.h>
+#include "stb_image.h"
 
-#include "grid.h"
 #include "common.h"
-#include "callback.h"
+#include "grid.h"
 #include "color.h"
 #include "smoke_screen.h"
+#include "shader.h"
 
 using namespace nanogui;
 using namespace std;
 
-static std::random_device rd;
-
-static mt19937 rng(rd());
-
 Grid grid;
-bool mouse_down = false;
-bool is_pause = false;
-bool shift_pressed = false;
-bool is_modify_vf = false;
-bool reset = false;
-bool debug = true;
-Vector2D enter_cell = Vector2D(0, 0);
-Vector2D exit_cell = Vector2D(0, 0);
-
-
-int size_smoke = 3 * (NUMROW / 100);
-double amount_smoke = 90;
-double amount_temperature = 50;
-double ambient_temperature = 0;
-double temperature_parameter = 0.015;
-double smoke_density_parameter = 0.005;
-double external_force_parameter = 0.5;
-double num_iter = 16;
-
-Vector3D global_rgb;
-extern Vector3D picked_rgb;
-
-int size_mouse = 3 * (NUMROW / 100);
-
-bool test = true;
-
-GLuint VBOs[NUMCOL * NUMROW], VAOs[NUMCOL * NUMROW], EBO;
-
 GLFWwindow *window = nullptr;
 Screen *screen = nullptr;
 
-void randomize_grid(Grid &grid, int num_speckle = 3, int size = 3) {
-    uni_dis dis_x(0, NUMCOL - size);
-    uni_dis dis_y(0, NUMROW - size);
-    uni_dis dis_density(25, 75);
-    uni_dis dis_size(1, size);
-    while (num_speckle--) {
-        int chosen_x = dis_x(rng);
-        int chosen_y = dis_y(rng);
-        int chosen_size = dis_size(rng);
-        double chosen_density = dis_density(rng);
-        for (int i = 0; i < chosen_size; ++i) {
-            for (int j = 0; j < chosen_size; ++j) {
-                grid.setDensity(chosen_x + i, chosen_y + j,
-                                grid.getDensity(chosen_x + i, chosen_y + j) + chosen_density);
-            }
-        }
-    }
-}
+static Vector3D rgb;
+static int size_mouse = 3 * (Con::NUMROW / 100);
+static bool test = true;
 
-void generate_vertices_array() {
-    GLuint elements[] = {
-            0, 1, 2,
-            2, 3, 0
-    };
-    double width = 1 / (double) NUMCOL * 2;
-    double height = 1 / (double) NUMROW * 2;
-    for (int y = 0; y < NUMROW; ++y) {
-        for (int x = 0; x < NUMCOL; ++x) {
-            float bottom_left_x = -1 + width * x;
-            float bottom_left_y = -1 + height * y;
-
-            float rectangle_vertices[] = {
-                    bottom_left_x, bottom_left_y + float(height), // top left
-                    bottom_left_x + float(width), bottom_left_y + float(height), // top right
-                    bottom_left_x + float(width), bottom_left_y, // bottom right
-                    bottom_left_x, bottom_left_y, // bottom left
-            };
-            int index = y * NUMCOL + x;
-            glBindVertexArray(VAOs[index]);
-            glBindBuffer(GL_ARRAY_BUFFER, VBOs[index]);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(rectangle_vertices), rectangle_vertices,
-                         GL_STATIC_DRAW); // TODO not sure if GL_DYNAMIC_DRAW is better
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
-            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-            glEnableVertexAttribArray(0);
-        }
-    }
-    glBindVertexArray(0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-void set_callback() {
-    glfwSetKeyCallback(window, [](GLFWwindow *, int key, int scancode, int action, int mods) {
-        screen->keyCallbackEvent(key, scancode, action, mods);
-    });
-
-    glfwSetCharCallback(window, [](GLFWwindow *, unsigned int codepoint) {
-        screen->charCallbackEvent(codepoint);
-    });
-
-    glfwSetDropCallback(window, [](GLFWwindow *, int count, const char **filenames) {
-        screen->dropCallbackEvent(count, filenames);
-    });
-
-    glfwSetScrollCallback(window, [](GLFWwindow *, double x, double y) {
-        screen->scrollCallbackEvent(x, y);
-    });
-
-    glfwSetFramebufferSizeCallback(window, [](GLFWwindow *, int width, int height) {
-        screen->resizeCallbackEvent(width, height);
-    });
-    glfwSetCursorPosCallback(window, cursor_position_callback);
-    glfwSetMouseButtonCallback(window, mouse_button_callback);
-    glfwSetWindowSizeCallback(window, window_size_callback);
-}
-
-GLuint build_shader_program() {
-    GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertex_shader);
-    int success;
-    char info_log[512];
-    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(vertex_shader, 512, NULL, info_log);
-        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << info_log << std::endl;
-    }
-    GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragment_shader);
-    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(fragment_shader, 512, NULL, info_log);
-        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << info_log << std::endl;
-    }
-    GLuint shader_program = glCreateProgram();
-    glAttachShader(shader_program, vertex_shader);
-    glAttachShader(shader_program, fragment_shader);
-    glLinkProgram(shader_program);
-    glGetProgramiv(shader_program, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shader_program, 512, NULL, info_log);
-        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << info_log << std::endl;
-    }
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
-
-    return shader_program;
-}
+extern void set_callback(GLFWwindow* );
+extern void error_callback(int error, const char* );
 
 int main() {
-    grid = Grid(NUMCOL + 2, NUMROW + 2);
 
+    grid = Grid(Con::NUMCOL + 2, Con::NUMROW + 2);
     vector<Vector2D> external_forces(grid.width * grid.height, Vector2D(0, 0));
 
     glfwSetErrorCallback(error_callback);
@@ -180,7 +44,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #endif
 
-    window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Smoke Simulation", nullptr, nullptr);
+    window = glfwCreateWindow(Con::WINDOW_WIDTH, Con::WINDOW_HEIGHT, "Smoke Simulation", nullptr, nullptr);
     if (!window) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -193,13 +57,11 @@ int main() {
         return -1;
     }
 
-    GLuint shader_program = build_shader_program();
-    glGenVertexArrays(NUMCOL * NUMROW, VAOs);
-    glGenBuffers(NUMCOL * NUMROW, VBOs);
-    glGenBuffers(1, &EBO);
+    build_shader_program();
     generate_vertices_array();
+
     screen = new SmokeScreen(window);
-    set_callback();
+    set_callback(window);
 
     glfwSwapInterval(1);
     glfwSwapBuffers(window);
@@ -209,32 +71,32 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT);
-        if (reset) {
-            reset = false;
+        if (Con::reset) {
+            Con::reset = false;
             fill(external_forces.begin(), external_forces.end(), Vector2D(0, 0));
         }
 
-        if (is_modify_vf && !mouse_down) {
+        if (Con::is_modify_vf && !Con::mouse_down) {
             double xpos = grid.cursor_pos.x;
             double ypos = grid.cursor_pos.y;
 
-            int row = int(NUMROW - NUMROW * ypos / double(WINDOW_HEIGHT));
-            int col = int(NUMCOL * xpos / double(WINDOW_WIDTH));
+            int row = int(Con::NUMROW - Con::NUMROW * ypos / double(Con::WINDOW_HEIGHT));
+            int col = int(Con::NUMCOL * xpos / double(Con::WINDOW_WIDTH));
 
-            enter_cell = Vector2D(col, row);
+            Con::enter_cell = Vector2D(col, row);
         }
 
-        if (mouse_down) {
-            if (is_modify_vf) {
+        if (Con::mouse_down) {
+            if (Con::is_modify_vf) {
                 double xpos = grid.cursor_pos.x;
                 double ypos = grid.cursor_pos.y;
 
-                int row = int(NUMROW - NUMROW * ypos / double(WINDOW_HEIGHT));
-                int col = int(NUMCOL * xpos / double(WINDOW_WIDTH));
+                int row = int(Con::NUMROW - Con::NUMROW * ypos / double(Con::WINDOW_HEIGHT));
+                int col = int(Con::NUMCOL * xpos / double(Con::WINDOW_WIDTH));
 
-                exit_cell = Vector2D(col, row);
-                if (exit_cell.x != enter_cell.x || exit_cell.y != enter_cell.y) {
-                    Vector2D direction_mouse_drag = exit_cell - enter_cell;
+                Con::exit_cell = Vector2D(col, row);
+                if (Con::exit_cell.x != Con::enter_cell.x || Con::exit_cell.y != Con::enter_cell.y) {
+                    Vector2D direction_mouse_drag = Con::exit_cell - Con::enter_cell;
                     for (int y = row - size_mouse; y < row + size_mouse; y++) {
                         for (int x = col - size_mouse; x < col + size_mouse; x++) {
                             if (y < 1 || x < 1 || y >= grid.height - 1 || x >= grid.width - 1) {
@@ -243,30 +105,31 @@ int main() {
                             external_forces[y * grid.width + x] = direction_mouse_drag.unit();
                         }
                     }
-                    enter_cell = exit_cell;
+                    Con::enter_cell = Con::exit_cell;
                 }
             } else {
                 double xpos = grid.cursor_pos.x;
                 double ypos = grid.cursor_pos.y;
 
-                int row = int(NUMROW - NUMROW * ypos / double(WINDOW_HEIGHT));
-                int col = int(NUMCOL * xpos / double(WINDOW_WIDTH));
+                int row = int(Con::NUMROW - Con::NUMROW * ypos / double(Con::WINDOW_HEIGHT));
+                int col = int(Con::NUMCOL * xpos / double(Con::WINDOW_WIDTH));
 
-                for (int y = row - size_smoke; y <= row + size_smoke; ++y) {
-                    for (int x = col - size_smoke; x <= col + size_smoke; ++x) {
+                for (int y = row - Con::size_smoke; y <= row + Con::size_smoke; ++y) {
+                    for (int x = col - Con::size_smoke; x <= col + Con::size_smoke; ++x) {
                         double dis2 = pow(y - row, 2.0) + pow(x - col, 2.0);
 
                         if (y < 1 || y >= grid.height - 1 || x < 1 || x >= grid.width - 1 ||
-                            (dis2 > size_smoke * size_smoke)) {
+                            (dis2 > Con::size_smoke * Con::size_smoke)) {
                             continue;
                         }
 
+                        dis2 /= pow((Con::NUMCOL / 100.0), 2.0);
                         double fall_off = 2.0 / max(dis2, 1.0);
 
                         double den = grid.getDensity(x, y);
                         double temp = grid.getTemperature(x, y);
-                        grid.setDensity(x, y, min(den + amount_smoke * fall_off, 100.0));
-                        grid.setTemperature(x, y, min(temp + amount_temperature * fall_off, 100.0));
+                        grid.setDensity(x, y, min(den + Con::amount_smoke * fall_off, 100.0));
+                        grid.setTemperature(x, y, min(temp + Con::amount_temperature * fall_off, 100.0));
 
                     }
                 }
@@ -275,30 +138,30 @@ int main() {
         cur_time = steady_clock::now();
         auto elapsed = duration_cast<milliseconds>(cur_time - last_time);
 
-        if (debug) simulation_start_time = steady_clock::now();
-        if (!is_pause && (FREQ * elapsed.count() >= 1000)) {
+        if (Con::debug) simulation_start_time = steady_clock::now();
+        if (!Con::is_pause && (Con::FREQ * elapsed.count() >= 1000)) {
             last_time = cur_time;
-            grid.simulate(1, external_forces, ambient_temperature, temperature_parameter, smoke_density_parameter, external_force_parameter, num_iter);
+            grid.simulate(1, external_forces, Con::ambient_temperature, Con::temperature_parameter, Con::smoke_density_parameter,
+                          Con::external_force_parameter, Con::num_iter);
         }
 
-        if (debug) {
+        if (Con::debug) {
             simulation_end_time = steady_clock::now();
             rendering_start_time = steady_clock::now();
         }
-        glUseProgram(shader_program);
 
-        if (is_modify_vf) {
-            for (int y = 0; y < NUMROW; ++y) {
-                for (int x = 0; x < NUMCOL; ++x) {
+        unsigned char data[Con::NUMROW * Con::NUMCOL * 3] = {0};
+        if (Con::is_modify_vf) {
+            for (int y = 0; y < Con::NUMROW; ++y) {
+                for (int x = 0; x < Con::NUMCOL; ++x) {
                     Vector2D accumulated_direction = Vector2D(0.0, 0.0);
                     for (int ys = -1 + y; ys <= y + 1; ++ys) {
                         for (int xs = -1 + x; xs <= x + 1; ++xs) {
-                            if (ys >= 0 && xs >= 0 && ys < NUMROW && xs < NUMCOL) {
+                            if (ys >= 0 && xs >= 0 && ys < Con::NUMROW && xs < Con::NUMCOL) {
                                 accumulated_direction += external_forces[ys * grid.width + xs];
                             }
                         }
                     }
-
                     double hue = 0;
                     double saturate = 100;
                     double value = 100;
@@ -313,46 +176,49 @@ int main() {
                         hue = angle;
                     }
 
-                    global_rgb = hsv2rgb({hue, saturate, value});
+                    rgb = hsv2rgb({hue, saturate, value});
 
-                    int index = y * NUMCOL + x;
-
-                    int vertexColorLocation = glGetUniformLocation(shader_program, "ourColor");
-                    glUniform4f(vertexColorLocation, global_rgb.x, global_rgb.y, global_rgb.z, 1.0f);
-                    glBindVertexArray(VAOs[index]);
-                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+                    int index = y * Con::NUMCOL + x;
+                    data[index * 3] = max(rgb.x * 255, 0.0);
+                    data[index * 3 + 1] = max(rgb.y * 255, 0.0);
+                    data[index * 3 + 2] = max(rgb.z * 255, 0.0);
                 }
             }
         } else {
-            for (int y = 0; y < NUMROW; ++y) {
-                for (int x = 0; x < NUMCOL; ++x) {
+            for (int y = 0; y < Con::NUMROW; ++y) {
+                for (int x = 0; x < Con::NUMCOL; ++x) {
                     double density = grid.getDensity(x, y);
-                    if (density <= DISPLAY_LIMIT) continue;
+                    if (density <= Con::DISPLAY_LIMIT) continue;
                     double temperature = grid.getTemperature(x, y);
 
                     double hue_center = 400;
                     double hue_halfspan = 50;
-                    if (picked_rgb.norm() > EPS) {
-                        Vector3D picked_hsv = rgb2hsv(picked_rgb);
+                    if (Con::picked_rgb.norm() > Con::EPS) {
+                        Vector3D picked_hsv = rgb2hsv(Con::picked_rgb);
                         hue_center = picked_hsv.x;
                     }
-
                     double hue = (int) (hue_center - (temperature - hue_halfspan)) % 360;
                     double saturate = 100.0;
                     double value = density;
 
-                    global_rgb = hsv2rgb({hue, saturate, value});
+                    rgb = hsv2rgb({hue, saturate, value});
 
-                    int index = y * NUMCOL + x;
-
-                    int vertexColorLocation = glGetUniformLocation(shader_program, "ourColor");
-                    glUniform4f(vertexColorLocation, global_rgb.x, global_rgb.y, global_rgb.z, 1.0f);
-                    glBindVertexArray(VAOs[index]);
-                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+                    int index = y * Con::NUMCOL + x;
+                    data[index * 3] = max(rgb.x * 255, 0.0);
+                    data[index * 3 + 1] = max(rgb.y * 255, 0.0);
+                    data[index * 3 + 2] = max(rgb.z * 255, 0.0);
                 }
             }
         }
-        if (debug) {
+
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Con::NUMCOL, Con::NUMROW, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glUseProgram(shader_program);
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        if (Con::debug) {
             rendering_end_time = steady_clock::now();
             rendering_time = duration_cast<milliseconds>(rendering_end_time - rendering_start_time).count();
             simulation_time = duration_cast<milliseconds>(simulation_end_time - simulation_start_time).count();
@@ -364,10 +230,10 @@ int main() {
         glfwSwapBuffers(window);
 
     }
-    glDeleteVertexArrays(NUMCOL * NUMROW, VAOs);
-    glDeleteBuffers(NUMCOL * NUMROW, VBOs);
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
-
+    glDeleteTextures(1, &texture);
     glfwTerminate();
     return 0;
 }

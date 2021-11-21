@@ -2,32 +2,60 @@
 #define common_h
 
 #include "omp.h"
+#include "grid.h"
+#include "chrono"
+
+#include <random>
+#include <nanogui/nanogui.h>
+#include "CGL/vector2D.h"
+#include "CGL/vector3D.h"
+#include "CGL/vector4D.h"
 
 using std::mt19937;
 using std::uniform_int_distribution;
 using uni_dis = uniform_int_distribution<int>;
 using namespace std::chrono;
 
-const int NUMCOL = 200;
-const int NUMROW = 200;
-const int FREQ   = 30;
-int WINDOW_WIDTH = 700;
-int WINDOW_HEIGHT = 640;
-const int DISPLAY_LIMIT = 1;
-const double EPS = 1e-3;
+class Con {
 
-const char *vertexShaderSource = "#version 330 core\n"
-                                 "layout (location = 0) in vec3 aPos;\n"
-                                 "void main()\n"
-                                 "{\n"
-                                 "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-                                 "}\0";
-const char *fragmentShaderSource = "#version 330 core\n"
-                                   "out vec4 FragColor;\n"
-                                   "uniform vec4 ourColor;\n"
-                                   "void main()\n"
-                                   "{\n"
-                                   "   FragColor = ourColor;\n"
-                                   "}\n\0";
+public:
+
+    static constexpr int NUMCOL = 500;
+    static constexpr int NUMROW = 500;
+    static constexpr int FREQ = 30;
+    static int WINDOW_WIDTH;
+    static int WINDOW_HEIGHT;
+    static constexpr int DISPLAY_LIMIT = 1;
+    static constexpr double EPS = 1e-3;
+
+    static bool mouse_down;
+    static bool is_pause;
+    static bool shift_pressed;
+    static bool is_modify_vf;
+    static bool reset;
+    static bool debug;
+
+    static int size_smoke;
+    static double amount_smoke;
+    static double amount_temperature;
+    static double ambient_temperature;
+    static double temperature_parameter;
+    static double smoke_density_parameter;
+    static double external_force_parameter;
+    static double num_iter;
+
+    static const GLchar *vertexShaderSource;
+    static const GLchar *fragmentShaderSource;
+
+    static Vector2D enter_cell;
+    static Vector2D exit_cell;
+
+    static Vector3D picked_rgb;
+
+    static std::random_device rd;
+
+    static mt19937 rng;
+
+};
 
 #endif

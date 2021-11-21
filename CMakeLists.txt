@@ -213,7 +213,9 @@ set(APPLICATION_SOURCE
         src/grid.h
         src/callback.h
         src/common.h
-        src/color.h src/smoke_screen.h)
+        src/color.h
+        src/smoke_screen.h
+        src/common.cpp src/shader.h src/callback.cpp)
 
 #-------------------------------------------------------------------------------
 # Set include directories
