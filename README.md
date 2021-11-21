@@ -34,3 +34,12 @@ make
 | ---- | -----------------|
 | p    | pause/resume     |
 | r    | reset all params |
+## Params
+| Params        | Properties          |
+| ------------- | --------------------|
+| Size          | kích cỡ             |
+| Ambient       | nhiệt độ môi trường |
+| Heat          | nhiệt độ            |
+| Density       | mật độ              |
+| Diffusion     | sự khuếch tán       |
+| Velocity      | vận tốc             |
