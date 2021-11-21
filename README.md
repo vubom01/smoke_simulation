@@ -18,10 +18,10 @@ make
 │   ├── color.h             // chuyển đổi màu sắc từ hsv sang rgb và ngược lại
 │   ├── common.cpp          // cấu hình chung project
 │   ├── common.h            // header 
-│   ├── grid.cpp            // khởi tạo và xử lý smoke_simulation trên lưới   
+│   ├── grid.cpp            // khởi tạo và xử lý mô phỏng khói trên lưới   
 │   ├── grid.h              // header 
 │   ├── main.cpp            // main
-│   ├── shader.h            // khởi tạo và xử lý bóng
+│   ├── shader.h            // xử lý bóng
 │   ├── smoke_screen.cpp    // bảng màu và thuộc tính
 │   └── smoke_screen.h      // header  
 ├── .gitignore  
