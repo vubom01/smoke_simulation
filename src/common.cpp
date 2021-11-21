@@ -1,6 +1,5 @@
 #include "common.h"
 
-
 int Con::WINDOW_WIDTH = 700;
 int Con::WINDOW_HEIGHT = 640;
 
@@ -27,6 +26,12 @@ Vector3D Con::picked_rgb = Vector3D(0, 0, 0);
 
 std::random_device Con::rd;
 mt19937 Con::rng = mt19937(Con::rd());
+
+GLuint Con::VAO = 0;
+GLuint Con::VBO = 0;
+GLuint Con::EBO = 0;
+GLuint Con::texture = 0;
+GLuint Con::shader_program = 0;
 
 const GLchar* Con::vertexShaderSource = R"glsl(
     #version 330 core

@@ -55,6 +55,7 @@ Grid &Grid::operator=(Grid &&grid) {
 }
 
 void Grid::simulate(double timestep, const vector<Vector2D>& external_forces, const double ambient_temperature, const double temperature_parameter, const double smoke_density_parameter, const double external_force_parameter, const double num_iter) {
+
     vector<double> new_density = simulate_density(timestep);
 
     vector<double> new_temperature = simulate_temperature(timestep);
@@ -69,6 +70,7 @@ void Grid::simulate(double timestep, const vector<Vector2D>& external_forces, co
 vector<double> Grid::simulate_density(const double timestep) {
     vector<double> combined_density(width * height, 0.0);
     vector<double> advection_grid(width * height, 0.0);
+#pragma omp parallel for
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             Vector2D reverse_velocity = -getVelocity(x, y) * timestep;
@@ -102,6 +104,7 @@ vector<double> Grid::simulate_density(const double timestep) {
 
 vector<double> Grid::simulate_temperature(const double timestep) {
     vector<double> advection_grid(width * height, 0.0);
+#pragma omp parallel for
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             Vector2D reverse_velocity = -getVelocity(x, y) * timestep;
@@ -135,6 +138,7 @@ vector<double> Grid::simulate_temperature(const double timestep) {
 vector<Vector2D> Grid::simulate_velocity(double timestep, const vector<Vector2D>& external_forces, const double ambient_temperature, const double temperature_parameter, const double smoke_density_parameter, const double external_force_parameter, const double num_iter) {
     vector<Vector2D> combined_velocity(width * height, Vector2D(0, 0));
     vector<Vector2D> self_advection_grid(width * height, Vector2D(0, 0));
+#pragma omp parallel for
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             Vector2D reverse_velocity = -getVelocity(x, y) * timestep;
@@ -172,8 +176,10 @@ vector<Vector2D> Grid::simulate_velocity(double timestep, const vector<Vector2D>
     double alpha = 1 / (timestep * num_iter);
     double beta = 4 + alpha;
     for (int iter = 0; iter < num_iter; ++iter) {
+#pragma omp parallel for
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
+                // Ignore boundaries for now
                 if (x == 0 || x == width - 1 || y == 0 || y == height - 1) {
                     continue;
                 }
@@ -193,7 +199,7 @@ vector<Vector2D> Grid::simulate_velocity(double timestep, const vector<Vector2D>
     set_boundary_conditions(viscous_velocity_grid, -1);
 
     Vector2D buoyant_direction = Vector2D(0, 1);
-
+#pragma omp parallel for
     for (int y = 1; y < height - 1; ++y) {
         for (int x = 1; x < width - 1; ++x) {
             Vector2D buoyant_force = (-smoke_density_parameter * getDensity(x, y) + (getTemperature(x, y) - ambient_temperature)*timestep*temperature_parameter)*buoyant_direction;
@@ -206,6 +212,7 @@ vector<Vector2D> Grid::simulate_velocity(double timestep, const vector<Vector2D>
 
     vector<double> divergence(width * height, 0.0);
     double halfrdx = 0.5;
+#pragma omp parallel for
     for (int y = 1; y < height - 1; ++y) {
         for (int x = 1; x < width - 1; ++x) {
             Vector2D wL = viscous_velocity_grid[x - 1 + y*width];
@@ -240,6 +247,7 @@ vector<Vector2D> Grid::simulate_velocity(double timestep, const vector<Vector2D>
 
     set_boundary_conditions(pressure, 1);
 
+#pragma omp parallel for
     for (int y = 1; y < height - 1; ++y) {
         for (int x = 1; x < width - 1; ++x) {
             double &pL = pressure[y * width + x - 1];
@@ -315,9 +323,9 @@ void Grid::printGrid() {
 }
 
 void randomize_grid(Grid &grid, int num_speckle = 3, int size = 3) {
-    uni_dis dis_x(0, Con::NUMCOL - size);
-    uni_dis dis_y(0, Con::NUMROW - size);
-    uni_dis dis_density(25, 75);
+    uni_dis dis_x(0, Con::NUMCOL - size); // uniform distribution in C++11
+    uni_dis dis_y(0, Con::NUMROW - size); // uniform distribution in C++11
+    uni_dis dis_density(25, 75); // uniform distribution in C++11
     uni_dis dis_size(1, size);
     while (num_speckle--) {
         int chosen_x = dis_x(Con::rng);

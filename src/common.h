@@ -1,7 +1,6 @@
 #ifndef common_h
 #define common_h
 
-#include "omp.h"
 #include "grid.h"
 #include "chrono"
 
@@ -16,17 +15,19 @@ using std::uniform_int_distribution;
 using uni_dis = uniform_int_distribution<int>;
 using namespace std::chrono;
 
+
 class Con {
 
 public:
 
-    static constexpr int NUMCOL = 500;
-    static constexpr int NUMROW = 500;
+    static constexpr int NUMCOL = 400;
+    static constexpr int NUMROW = 400;
+
     static constexpr int FREQ = 30;
-    static int WINDOW_WIDTH;
-    static int WINDOW_HEIGHT;
     static constexpr int DISPLAY_LIMIT = 1;
     static constexpr double EPS = 1e-3;
+    static int WINDOW_WIDTH;
+    static int WINDOW_HEIGHT;
 
     static bool mouse_down;
     static bool is_pause;
@@ -44,18 +45,22 @@ public:
     static double external_force_parameter;
     static double num_iter;
 
+    static Vector3D picked_rgb;
+
     static const GLchar *vertexShaderSource;
     static const GLchar *fragmentShaderSource;
 
     static Vector2D enter_cell;
     static Vector2D exit_cell;
 
-    static Vector3D picked_rgb;
-
     static std::random_device rd;
 
     static mt19937 rng;
 
+    static GLuint VAO, VBO, EBO;
+    static GLuint texture;
+    static GLuint shader_program;
 };
+
 
 #endif

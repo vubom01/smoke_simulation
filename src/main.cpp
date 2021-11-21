@@ -2,9 +2,9 @@
 #include <chrono>
 #include <algorithm>
 #include <thread>
+#include <condition_variable>
 #include <math.h>
 #include <nanogui/nanogui.h>
-
 #include <CGL/CGL.h>
 #include "stb_image.h"
 
@@ -24,58 +24,15 @@ Screen *screen = nullptr;
 static Vector3D rgb;
 static int size_mouse = 3 * (Con::NUMROW / 100);
 static bool test = true;
+static bool finished = false;
 
-extern void set_callback(GLFWwindow* );
-extern void error_callback(int error, const char* );
+extern void set_callback(GLFWwindow *);
+extern void error_callback(int error, const char *);
 
-int main() {
+void draw_mouse(vector<Vector2D> &external_forces) {
 
-    grid = Grid(Con::NUMCOL + 2, Con::NUMROW + 2);
-    vector<Vector2D> external_forces(grid.width * grid.height, Vector2D(0, 0));
-
-    glfwSetErrorCallback(error_callback);
-    if (!glfwInit()) {
-        return -1;
-    }
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#endif
-
-    window = glfwCreateWindow(Con::WINDOW_WIDTH, Con::WINDOW_HEIGHT, "Smoke Simulation", nullptr, nullptr);
-    if (!window) {
-        std::cout << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-
-    glfwMakeContextCurrent(window);
-    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
-        std::cout << "Failed to initialize GLAD" << std::endl;
-        return -1;
-    }
-
-    build_shader_program();
-    generate_vertices_array();
-
-    screen = new SmokeScreen(window);
-    set_callback(window);
-
-    glfwSwapInterval(1);
-    glfwSwapBuffers(window);
-    auto last_time = steady_clock::now();
-    steady_clock::time_point rendering_start_time, rendering_end_time, simulation_start_time, simulation_end_time, cur_time;
-    long long rendering_time, simulation_time;
-    while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-        glClear(GL_COLOR_BUFFER_BIT);
-        if (Con::reset) {
-            Con::reset = false;
-            fill(external_forces.begin(), external_forces.end(), Vector2D(0, 0));
-        }
-
+    while (!finished) {
+        std::this_thread::sleep_for(milliseconds(5));
         if (Con::is_modify_vf && !Con::mouse_down) {
             double xpos = grid.cursor_pos.x;
             double ypos = grid.cursor_pos.y;
@@ -124,7 +81,7 @@ int main() {
                         }
 
                         dis2 /= pow((Con::NUMCOL / 100.0), 2.0);
-                        double fall_off = 2.0 / max(dis2, 1.0);
+                        double fall_off = 1.0 / max(dis2, 1.0);
 
                         double den = grid.getDensity(x, y);
                         double temp = grid.getTemperature(x, y);
@@ -135,13 +92,65 @@ int main() {
                 }
             }
         }
+    }
+}
+
+int main() {
+
+    grid = Grid(Con::NUMCOL + 2, Con::NUMROW + 2);
+    vector<Vector2D> external_forces(grid.width * grid.height, Vector2D(0, 0));
+
+    glfwSetErrorCallback(error_callback);
+    if (!glfwInit()) {
+        return -1;
+    }
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+
+    window = glfwCreateWindow(Con::WINDOW_WIDTH, Con::WINDOW_HEIGHT, "Smoke Simulation", nullptr, nullptr);
+    if (!window) {
+        std::cout << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+
+    glfwMakeContextCurrent(window);
+    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+        std::cout << "Failed to initialize GLAD" << std::endl;
+        return -1;
+    }
+
+    build_shader_program();
+    generate_vertices_array();
+
+    screen = new SmokeScreen(window);
+    set_callback(window);
+
+    glfwSwapInterval(1); // To prevent screen tearing
+    glfwSwapBuffers(window);
+    auto last_time = steady_clock::now();
+    steady_clock::time_point rendering_start_time, rendering_end_time, simulation_start_time, simulation_end_time, cur_time;
+    long long rendering_time, simulation_time;
+
+    auto mouse_th = std::thread(draw_mouse, std::ref(external_forces));
+
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+        glClear(GL_COLOR_BUFFER_BIT);
+        if (Con::reset) {
+            Con::reset = false;
+            fill(external_forces.begin(), external_forces.end(), Vector2D(0, 0));
+        }
+
         cur_time = steady_clock::now();
         auto elapsed = duration_cast<milliseconds>(cur_time - last_time);
 
         if (Con::debug) simulation_start_time = steady_clock::now();
         if (!Con::is_pause && (Con::FREQ * elapsed.count() >= 1000)) {
             last_time = cur_time;
-            grid.simulate(1, external_forces, Con::ambient_temperature, Con::temperature_parameter, Con::smoke_density_parameter,
+            grid.simulate(1, external_forces, Con::ambient_temperature, Con::temperature_parameter,
+                          Con::smoke_density_parameter,
                           Con::external_force_parameter, Con::num_iter);
         }
 
@@ -211,12 +220,12 @@ int main() {
             }
         }
 
-        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindTexture(GL_TEXTURE_2D, Con::texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Con::NUMCOL, Con::NUMROW, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glUseProgram(shader_program);
-        glBindVertexArray(VAO);
+        glBindTexture(GL_TEXTURE_2D, Con::texture);
+        glUseProgram(Con::shader_program);
+        glBindVertexArray(Con::VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         if (Con::debug) {
             rendering_end_time = steady_clock::now();
@@ -230,10 +239,14 @@ int main() {
         glfwSwapBuffers(window);
 
     }
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
-    glDeleteTextures(1, &texture);
+    glDeleteVertexArrays(1, &Con::VAO);
+    glDeleteBuffers(1, &Con::VBO);
+    glDeleteBuffers(1, &Con::EBO);
+    glDeleteTextures(1, &Con::texture);
+
+    finished = true;
+    mouse_th.join();
+
     glfwTerminate();
     return 0;
 }
