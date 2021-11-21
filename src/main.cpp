@@ -65,13 +65,41 @@ int main() {
     auto last_time = steady_clock::now();
     steady_clock::time_point rendering_start_time, rendering_end_time, simulation_start_time, simulation_end_time, cur_time;
     long long rendering_time, simulation_time;
-
+    Vector2D prev_cursor = grid.cursor_pos;
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT);
         if (Con::reset) {
             Con::reset = false;
             fill(external_forces.begin(), external_forces.end(), Vector2D(0, 0));
+        }
+
+        if (Con::mouse_down && prev_cursor.x == grid.cursor_pos.x && prev_cursor.y == grid.cursor_pos.y) {
+            double xpos = grid.cursor_pos.x;
+            double ypos = grid.cursor_pos.y;
+
+            int row = int(Con::NUMROW - Con::NUMROW * ypos / double(Con::WINDOW_HEIGHT));
+            int col = int(Con::NUMCOL * xpos / double(Con::WINDOW_WIDTH));
+
+            for (int y = row - Con::size_smoke; y <= row + Con::size_smoke; ++y) {
+                for (int x = col - Con::size_smoke; x <= col + Con::size_smoke; ++x) {
+                    double dis2 = pow(y - row, 2.0) + pow(x - col, 2.0);
+                    if (y < 1 || y >= grid.height - 1 || x < 1 || x >= grid.width - 1 ||
+                        (dis2 > Con::size_smoke * Con::size_smoke)) {
+                        continue;
+                    }
+                    dis2 /= pow((Con::NUMCOL / 100.0), 2.0);
+                    double fall_off = 1.0 / max(dis2, 1.0);
+
+                    double den = grid.getDensity(x, y);
+                    double temp = grid.getTemperature(x, y);
+                    grid.setDensity(x, y, min(den + Con::amount_smoke * fall_off, 100.0));
+                    grid.setTemperature(x, y, min(temp + Con::amount_temperature * fall_off, 100.0));
+
+                }
+            }
+        } else {
+            prev_cursor = grid.cursor_pos;
         }
 
         cur_time = steady_clock::now();
