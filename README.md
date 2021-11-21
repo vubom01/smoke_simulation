@@ -32,7 +32,7 @@ make
 ## Keyboard
 | Key  | Function         |
 | ---- | -----------------|
-| p    | pause/resume     |
+| p    | pause/resume     |readme
 | r    | reset all params |
 ## Params
 | Params        | Properties          |
