@@ -26,6 +26,7 @@ static Vector3D rgb;
 static bool test = true;
 
 extern void set_callback(GLFWwindow *);
+
 extern void error_callback(int error, const char *);
 
 int main() {
@@ -172,9 +173,9 @@ int main() {
                     rgb = hsv2rgb({hue, saturate, value});
 
                     int index = y * Con::NUMCOL + x;
-                    data[index * 3] = max(rgb.x * 255, 0.0);
-                    data[index * 3 + 1] = max(rgb.y * 255, 0.0);
-                    data[index * 3 + 2] = max(rgb.z * 255, 0.0);
+                    data[index * 3] = (unsigned char) max(rgb.x * 255, 0.0);
+                    data[index * 3 + 1] = (unsigned char) max(rgb.y * 255, 0.0);
+                    data[index * 3 + 2] = (unsigned char) max(rgb.z * 255, 0.0);
                 }
             }
         }
